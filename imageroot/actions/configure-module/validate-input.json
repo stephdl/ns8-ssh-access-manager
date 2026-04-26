@@ -1,11 +1,11 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "Configure kickstart",
-    "$id": "http://nethserver.org/json-schema/task/input/kickstart/configure-module",
-    "description": "Configure kickstart",
+    "title": "Configure ssh-access-manager",
+    "$id": "http://nethserver.org/json-schema/task/input/ssh-access-manager/configure-module",
+    "description": "Configure ssh-access-manager",
     "examples": [
         {
-            "host": "kickstart.domain.org",
+            "host": "ssh-access-manager.domain.org",
             "http2https": true,
             "lets_encrypt": true
         }
@@ -17,7 +17,7 @@
     "properties": {
         "host": {
             "type": "string",
-            "description": "Host name for the application, like 'kickstart.domain.org'",
+            "description": "Host name for the application, like 'ssh-access-manager.domain.org'",
             "format": "hostname",
             "pattern": "\\."
         },
@@ -30,6 +30,22 @@
             "type": "boolean",
             "title": "HTTP to HTTPS redirection",
             "description": "Redirect all the HTTP requests to HTTPS"
+        },
+        "from": {
+            "type": "string",
+            "description": "Email address used as sender in the smarthost configuration",
+            "anyOf": [
+                {"maxLength": 0},
+                {"format": "email"}
+            ]
+        },
+        "to": {
+            "type": "string",
+            "description": "Email address used as recipient in the smarthost configuration",
+            "anyOf": [
+                {"maxLength": 0},
+                {"format": "email"}
+            ]
         }
     }
 }
