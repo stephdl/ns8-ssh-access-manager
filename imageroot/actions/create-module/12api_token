@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2026 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+import agent
+import os
+import string
+import secrets
+
+try:
+    flask_env = agent.read_envfile("secrets.env")
+except FileNotFoundError:
+    # Generate a new API token, for webtop.properties expansion
+    alphabet = string.ascii_letters + string.digits
+    api_token = ''.join([secrets.choice(alphabet) for i in range(32)])
+    postgres_password = ''.join([secrets.choice(alphabet) for i in range(32)])
+    flask_env = {
+        "FLASK_SECRET_KEY": api_token,
+        "POSTGRES_PASSWORD": postgres_password,
+    }
+    agent.write_envfile("secrets.env", flask_env)
