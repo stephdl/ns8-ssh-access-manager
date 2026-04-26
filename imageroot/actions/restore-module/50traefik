@@ -16,5 +16,15 @@ renv = request['environment']
 configure_retval = agent.tasks.run(agent_id=os.environ['AGENT_ID'], action='configure-module', data={
     "host": renv["TRAEFIK_HOST"],
     "http2https": renv["TRAEFIK_HTTP2HTTPS"] == "True",
+    "from": renv.get("SMTP_FROM", ""),
+    "to": renv.get("SMTP_TO", ""),
+    "ssh_user": renv.get("SSH_USER", "audit-collector"),
+    "scan_interval_hours": renv.get("SCAN_INTERVAL_HOURS", "4"),
+    "expire_warn_days": renv.get("EXPIRE_WARN_DAYS", "7"),
+    "expire_warn_days_2": renv.get("EXPIRE_WARN_DAYS_2", "2"),
+    "admin_username": renv.get("ADMIN_USERNAME", "admin"),
+    "admin_email": renv.get("ADMIN_EMAIL", "admin@example.com"),
+    "admin_password": renv.get("ADMIN_PASSWORD", "admin"),
+    "tz": renv.get("TZ", "UTC"),
 })
 agent.assert_exp(configure_retval['exit_code'] == 0, "The configure-module subtask failed!")
