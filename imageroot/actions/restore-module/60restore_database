@@ -1,0 +1,45 @@
+#!/bin/bash
+
+#
+# Copyright (C) 2026 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+set -e -o pipefail
+exec 1>&2 # Redirect any output to the journal (stderr)
+
+# Read secrets
+source <(grep -v '^#' secrets.env | sed 's/^/export /')
+
+# PostgreSQL runs embedded inside the ssh-access-manager-app container,
+# managed by supervisord. Data is stored at /data/pg inside the container.
+# We restore by copying the dump into the running container and using
+# pg_restore via the UNIX socket at /run/postgresql.
+
+# Wait for PostgreSQL to be ready inside the container (supervisord starts it async)
+for i in $(seq 1 30); do
+    podman exec ssh-access-manager-app \
+        su -s /bin/sh postgres -c "pg_isready -h /run/postgresql -q" && break
+    sleep 2
+done
+
+# Copy the dump file into the container
+podman cp ssh-access-manager.pg_dump ssh-access-manager-app:/tmp/ssh-access-manager.pg_dump
+
+# Drop and recreate the database to avoid conflicts, then restore
+podman exec ssh-access-manager-app \
+    su -s /bin/sh postgres -c \
+    "psql -h /run/postgresql -c 'DROP DATABASE IF EXISTS ssh_manager;' \
+     && psql -h /run/postgresql -c 'CREATE DATABASE ssh_manager OWNER ssh_manager;'"
+
+podman exec ssh-access-manager-app \
+    su -s /bin/sh postgres -c \
+    "PGPASSWORD=${POSTGRES_PASSWORD} pg_restore --no-owner --no-privileges \
+        -h /run/postgresql \
+        -U ssh_manager \
+        -d ssh_manager \
+        /tmp/ssh-access-manager.pg_dump"
+
+# Clean up
+podman exec ssh-access-manager-app rm -f /tmp/ssh-access-manager.pg_dump
+rm -f ssh-access-manager.pg_dump

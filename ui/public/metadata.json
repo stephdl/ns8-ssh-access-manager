@@ -1,19 +1,21 @@
 {
-  "name": "kickstart",
+  "name": "ssh-access-manager",
   "description": {
-    "en": "My kickstart module"
+    "en": "Audit and manage SSH authorized keys across your infrastructure. Detects anomalies, enforces ANSSI compliance, and provides a web UI for key lifecycle management."
   },
-  "categories": [],
+  "categories": [
+    "security"
+  ],
   "authors": [
     {
-      "name": "Name Surname",
-      "email": "author@yourmail.org"
+      "name": "Stephane de Labrusse",
+      "email": "stephdl@de-labrusse.fr"
     }
   ],
   "docs": {
-    "documentation_url": "https://docs.kickstart.com/",
-    "bug_url": "https://github.com/NethServer/dev",
-    "code_url": "https://github.com/author/ns8-kickstart"
+    "documentation_url": "https://github.com/stephdl/ns8-ssh-access-manager/blob/main/README.md",
+    "bug_url": "https://github.com/stephdl/dev/issues",
+    "code_url": "https://github.com/stephdl/ns8-ssh-access-manager"
   },
-  "source": "ghcr.io/nethserver/kickstart"
+  "source": "ghcr.io/stephdl/ssh-access-manager"
 }

@@ -1,163 +1,169 @@
-# ns8-kickstart
+# ns8-ssh-access-manager
 
-This is a template module for [NethServer 8](https://github.com/NethServer/ns8-core).
-To start a new module from it:
+NethServer 8 module for [ssh-access-manager](https://github.com/stephdl/ssh-access-manager) — an SSH access audit and management tool running in a single Alpine Linux container.
 
-1. Click on [Use this template](https://github.com/NethServer/ns8-kickstart/generate).
-   Name your repo with `ns8-` prefix (e.g. `ns8-mymodule`). 
-   Do not end your module name with a number, like ~~`ns8-baaad2`~~!
+## What it does
 
-1. Clone the repository, enter the cloned directory and
-   [configure your GIT identity](https://git-scm.com/book/en/v2/Getting-Started-First-Time-Git-Setup#_your_identity)
+ssh-access-manager audits SSH access across a fleet of Linux servers without requiring root access for day-to-day operations. All interactions with remote servers go through a dedicated **non-root Unix user** (`audit-collector` by default) with a minimal and explicit `sudo` delegation.
 
-1. Rename some references inside the repo:
-   ```
-   modulename=$(basename $(pwd) | sed 's/^ns8-//') &&
-   git mv imageroot/systemd/user/kickstart.service imageroot/systemd/user/${modulename}.service &&
-   git mv imageroot/systemd/user/kickstart-app.service imageroot/systemd/user/${modulename}-app.service && 
-   git mv tests/kickstart.robot tests/${modulename}.robot &&
-   sed -i "s/kickstart/${modulename}/g" $(find .github/ * -type f) &&
-   git commit -a -m "Repository initialization"
-   ```
+### How remote server access works
 
-1. Edit this `README.md` file, by replacing this section with your module
-   description
+A dedicated Unix user (`audit-collector`) is created on each remote server during provisioning. This user connects via SSH using an ED25519 key pair generated inside the container, and is granted `sudo` rights **only** for the following scripts — nothing else:
 
-1. Adjust `.github/workflows` to your needs. `clean-registry.yml` might
-   need the proper list of image names to work correctly. Unused workflows
-   can be disabled from the GitHub Actions interface.
+| Script | Purpose |
+|---|---|
+| `sam-collect` | Lists all `authorized_keys` entries across all Unix users — used for periodic inventory scans |
+| `sam-revoke` | Removes a specific key from `authorized_keys` by SHA256 fingerprint, using an atomic rewrite (`mktemp` + `mv`) |
+| `sam-add` | Creates a Unix user if needed, then adds a public key to `authorized_keys` with correct permissions |
+| `sam-lock-user` | Runs `usermod -L -s /sbin/nologin <user>` — blocks SSH access even with a valid key |
+| `sam-unlock-user` | Runs `usermod -U -s /bin/bash <user>` — restores normal access |
 
-1. Commit and push your local changes
+These scripts are embedded in the container image, deployed to each host via SFTP, and updated automatically when their SHA256 hash changes (tracked in the audit log).
+
+### Key lifecycle and alerting
+
+- **Inventory**: on first scan, all existing keys are imported with status `PENDING_REVIEW` and a CRITICAL email alert is sent for each unknown key.
+- **Weak key detection**: key conformity is checked against ANSSI recommendations (BP-099). `ssh-ed25519` keys are always compliant; `ssh-rsa` requires ≥ 4096 bits. Non-compliant keys are flagged with a ⚠️ badge in the UI.
+- **Expiration**: keys can be given an expiration date or a duration in hours. Two warning emails are sent before expiry (configurable via `expire_warn_days` and `expire_warn_days_2`). Revocation is automatic at expiry.
+- **Anomaly detection**: if a key disappears from `authorized_keys` without going through the system, or if a previously revoked key reappears (e.g. via `ssh-copy-id`), a CRITICAL alert is sent immediately.
+
+### Key deployment
+
+From the web UI (Access tab → Deploy SSH key), administrators can deploy a new public key to any active server. The form collects the target Unix user (created if it does not exist), the public key, the target server, an optional expiration, and a mandatory justification. The key is then added via `sam-add` and tracked in the database with status `ACTIVE`.
+
+For a deeper look at the technical design, see the [DESIGN.md](https://github.com/stephdl/ssh-access-manager/blob/main/DESIGN.md) of the upstream project.
+
+**Stack**: Python 3.12 · Flask · PostgreSQL 18 · Nginx · Vue.js 3 · Supervisord · Alpine
 
 ## Install
 
 Instantiate the module with:
 
-    add-module ghcr.io/nethserver/kickstart:latest 1
+```
+add-module ghcr.io/stephdl/ssh-access-manager:latest 1
+```
 
-The output of the command will return the instance name.
-Output example:
+The output of the command will return the instance name:
 
-    {"module_id": "kickstart1", "image_name": "kickstart", "image_url": "ghcr.io/nethserver/kickstart:latest"}
+```json
+{"module_id": "ssh-access-manager1", "image_name": "ssh-access-manager", "image_url": "ghcr.io/stephdl/ssh-access-manager:latest"}
+```
 
 ## Configure
 
-Let's assume that the mattermost instance is named `kickstart1`.
+Let's assume the instance is named `ssh-access-manager1`.
 
-Launch `configure-module`, by setting the following parameters:
-- `host`: a fully qualified domain name for the application
-- `http2https`: enable or disable HTTP to HTTPS redirection (true/false)
-- `lets_encrypt`: enable or disable Let's Encrypt certificate (true/false)
+Launch `configure-module` with the following parameters:
 
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `host` | string | yes | FQDN for the application, e.g. `ssh-access-manager.domain.org` |
+| `http2https` | boolean | no | Redirect HTTP to HTTPS (default: `true`) |
+| `lets_encrypt` | boolean | no | Request a Let's Encrypt certificate (default: `false`) |
+| `from` | string (email) | no | Sender address for email alerts (empty to disable) |
+| `to` | string (email) | no | Recipient address for email alerts (empty to disable) |
+| `ssh_user` | string | no | Unix user created on remote servers for auditing (default: `audit-collector`) |
+| `scan_interval_hours` | string | no | Interval in hours between automatic scans (default: `4`) |
+| `expire_warn_days` | string | no | Days before key expiry for the first warning (default: `7`) |
+| `expire_warn_days_2` | string | no | Days before key expiry for the second warning (default: `2`) |
+| `admin_username` | string | no | Initial administrator username (default: `admin`) |
+| `admin_email` | string | no | Initial administrator email |
+| `admin_password` | string | no | Initial administrator password |
+| `tz` | string | no | Timezone (default: `UTC`) |
 
 Example:
 
 ```
-api-cli run configure-module --agent module/kickstart1 --data - <<EOF
+api-cli run configure-module --agent module/ssh-access-manager1 --data - <<EOF
 {
-  "host": "kickstart.domain.com",
+  "host": "ssh-access-manager.domain.org",
   "http2https": true,
-  "lets_encrypt": false
+  "lets_encrypt": true,
+  "from": "noreply@domain.org",
+  "to": "admin@domain.org",
+  "ssh_user": "audit-collector",
+  "scan_interval_hours": "4",
+  "expire_warn_days": "7",
+  "expire_warn_days_2": "2",
+  "admin_username": "admin",
+  "admin_email": "admin@domain.org",
+  "admin_password": "changeme",
+  "tz": "Europe/Paris"
 }
 EOF
 ```
 
 The above command will:
-- start and configure the kickstart instance
-- configure a virtual host for trafik to access the instance
+- generate secrets (`FLASK_SECRET_KEY`, `POSTGRES_PASSWORD`) on first run and persist them in `secrets.env`
+- start and configure the ssh-access-manager instance
+- configure a Traefik virtual host to expose the application
 
 ## Get the configuration
-You can retrieve the configuration with
 
 ```
-api-cli run get-configuration --agent module/kickstart1
+api-cli run get-configuration --agent module/ssh-access-manager1
 ```
 
-## Uninstall
+## Provision a remote server
 
-To uninstall the instance:
+Both steps (preparing the remote host and registering it in the database) can be done with a single helper script. Enter the module environment first:
 
-    remove-module --no-preserve kickstart1
+```bash
+runagent -m ssh-access-manager1
+```
+
+Then use the `provision-server` script:
+
+```bash
+../bin/provision-server --hostname server-prod-01 --ip 192.168.1.100 --user root --env production --os rhel
+```
+
+Options:
+
+| Option | Default | Description |
+|---|---|---|
+| `--hostname` | — | Server hostname (required) |
+| `--ip` | — | Server IP address (required) |
+| `--user` | `root` | SSH user to connect with |
+| `--env` | `production` | Environment: `production`, `staging`, `development` |
+| `--os` | `other` | OS family: `rhel`, `debian`, `ubuntu`, `alpine`, `other` |
+
+The script:
+1. Deploys the `audit-collector` user, SSH key, and sudoers rules on the target server (idempotent — safe to re-run after a rebuild or sudoers change).
+2. Registers the server in the database.
+
+The server can also be declared manually via the web UI: **Dashboard → + Add server**.
+
+The collector public key is visible in the web UI at **Dashboard > Collector public key**.
+
+## Workflow overview
+
+1. **Provision** each remote server (see above).
+2. **Declare** the server in the web UI (Dashboard → + Add server) or via the NS8 API.
+3. **Scan** — at first scan, all existing `authorized_keys` are imported with status `PENDING_REVIEW` and a CRITICAL email alert is sent for each unknown key.
+4. **Review** anomalies in the web UI (Anomalies tab): validate legitimate keys or revoke unwanted ones.
+5. From that point, the module scans automatically every `scan_interval_hours` hours and alerts on any change detected outside the system.
 
 ## Smarthost setting discovery
 
-Some configuration settings, like the smarthost setup, are not part of the
-`configure-module` action input: they are discovered by looking at some
-Redis keys.  To ensure the module is always up-to-date with the
-centralized [smarthost
-setup](https://nethserver.github.io/ns8-core/core/smarthost/) every time
-kickstart starts, the command `bin/discover-smarthost` runs and refreshes
-the `state/smarthost.env` file with fresh values from Redis.
+Email alert settings (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`) are not part of `configure-module` input. They are discovered automatically from the NethServer 8 centralized [smarthost configuration](https://nethserver.github.io/ns8-core/core/smarthost/) each time the service starts via `bin/discover-smarthost`.
 
-Furthermore if smarthost setup is changed when kickstart is already
-running, the event handler `events/smarthost-changed/10reload_services`
-restarts the main module service.
+If the smarthost configuration changes while the module is running, the event handler `events/smarthost-changed/10reload_services` restarts the service automatically.
 
-See also the `systemd/user/kickstart.service` file.
+The `from` and `to` email addresses are set via `configure-module` and can be left empty to disable email alerts.
 
-This setting discovery is just an example to understand how the module is
-expected to work: it can be rewritten or discarded completely.
-
-## Debug
-
-some CLI are needed to debug
-
-- The module runs under an agent that initiate a lot of environment variables (in /home/kickstart1/.config/state), it could be nice to verify them
-on the root terminal
-
-    `runagent -m kickstart1 env`
-
-- you can become runagent for testing scripts and initiate all environment variables
-  
-    `runagent -m kickstart1`
-
- the path become : 
-```
-    echo $PATH
-    /home/kickstart1/.config/bin:/usr/local/agent/pyenv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/usr/
-```
-
-- if you want to debug a container or see environment inside
- `runagent -m kickstart1`
- ```
-podman ps
-CONTAINER ID  IMAGE                                      COMMAND               CREATED        STATUS        PORTS                    NAMES
-d292c6ff28e9  localhost/podman-pause:4.6.1-1702418000                          9 minutes ago  Up 9 minutes  127.0.0.1:20015->80/tcp  80b8de25945f-infra
-d8df02bf6f4a  docker.io/library/mariadb:10.11.5          --character-set-s...  9 minutes ago  Up 9 minutes  127.0.0.1:20015->80/tcp  mariadb-app
-9e58e5bd676f  docker.io/library/nginx:stable-alpine3.17  nginx -g daemon o...  9 minutes ago  Up 9 minutes  127.0.0.1:20015->80/tcp  kickstart-app
-```
-
-you can see what environment variable is inside the container
-```
-podman exec  kickstart-app env
-PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-TERM=xterm
-PKG_RELEASE=1
-MARIADB_DB_HOST=127.0.0.1
-MARIADB_DB_NAME=kickstart
-MARIADB_IMAGE=docker.io/mariadb:10.11.5
-MARIADB_DB_TYPE=mysql
-container=podman
-NGINX_VERSION=1.24.0
-NJS_VERSION=0.7.12
-MARIADB_DB_USER=kickstart
-MARIADB_DB_PASSWORD=kickstart
-MARIADB_DB_PORT=3306
-HOME=/root
-```
-
-you can run a shell inside the container
+## Uninstall
 
 ```
-podman exec -ti   kickstart-app sh
-/ # 
+remove-module --no-preserve ssh-access-manager1
 ```
+
 ## Testing
 
 Test the module using the `test-module.sh` script:
 
 
-    ./test-module.sh <NODE_ADDR> ghcr.io/nethserver/kickstart:latest
+    ./test-module.sh <NODE_ADDR> ghcr.io/nethserver/ssh-access-manager:latest
 
 The tests are made using [Robot Framework](https://robotframework.org/)
 

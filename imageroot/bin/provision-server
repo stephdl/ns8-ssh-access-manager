@@ -1,0 +1,83 @@
+#!/bin/bash
+
+#
+# Copyright (C) 2026 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Provision a remote server and register it in the ssh-access-manager database.
+# Must be run inside the module environment: runagent -m ssh-access-managerN
+#
+# Usage: provision-server --hostname <hostname> --ip <ip> [options]
+#
+
+set -e
+
+usage() {
+    cat <<EOF
+Usage: $(basename "$0") --hostname HOSTNAME --ip IP [OPTIONS]
+
+Provision a remote host for SSH auditing and register it in the database.
+
+Required:
+  --hostname HOSTNAME   Server hostname (e.g. server-prod-01)
+  --ip       IP         Server IP address (e.g. 192.168.1.10)
+
+Options:
+  --user     USER       SSH user to connect with (default: root)
+  --env      ENV        Environment: production, staging, development (default: production)
+  --os       OS         OS family: rhel, debian, ubuntu, alpine, other (default: other)
+  -h, --help            Show this help message
+EOF
+}
+
+HOSTNAME=""
+IP=""
+SSH_USER="root"
+ENV="production"
+OS="other"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --hostname) HOSTNAME="$2"; shift 2 ;;
+        --ip)       IP="$2";       shift 2 ;;
+        --user)     SSH_USER="$2"; shift 2 ;;
+        --env)      ENV="$2";      shift 2 ;;
+        --os)       OS="$2";       shift 2 ;;
+        -h|--help)  usage; exit 0 ;;
+        *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
+    esac
+done
+
+if [[ -z "$HOSTNAME" || -z "$IP" ]]; then
+    echo "Error: --hostname and --ip are required." >&2
+    usage
+    exit 1
+fi
+
+echo "[provision-server] Step 1 — Provisioning remote host ${SSH_USER}@${IP} ..."
+
+# Write the provision script to a temp file so that SSH can still prompt
+# for the root password interactively (stdin must remain a tty for auth)
+TMPSCRIPT=$(mktemp /tmp/provision-host-XXXXXX.sh)
+trap 'rm -f "$TMPSCRIPT"' EXIT
+podman exec ssh-access-manager-app cat /app/provision-host.sh > "$TMPSCRIPT"
+PUBKEY=$(podman exec ssh-access-manager-app cat /data/keys/collector_key.pub)
+
+ssh "${SSH_USER}@${IP}" "sudo bash -s '${PUBKEY}'" < "$TMPSCRIPT"
+
+echo "[provision-server] Step 2 — Registering server '${HOSTNAME}' (${IP}) in the database ..."
+if podman exec ssh-access-manager-app \
+    python3 /app/app/manage.py servers show "${HOSTNAME}" >/dev/null 2>&1; then
+    echo "[provision-server] Server '${HOSTNAME}' already exists in the database, skipping registration."
+else
+    podman exec ssh-access-manager-app \
+        python3 /app/app/manage.py servers add \
+        --hostname "${HOSTNAME}" \
+        --ip "${IP}" \
+        --env "${ENV}" \
+        --os "${OS}"
+fi
+
+echo "[provision-server] Done. Server '${HOSTNAME}' is ready to be scanned."
+echo "[provision-server] Run the first scan :"
+podman exec ssh-access-manager-app python3 /app/app/manage.py servers scan --server ${HOSTNAME}
