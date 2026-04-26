@@ -16,6 +16,16 @@ original_environment = request['environment']
 for evar in [
         "TRAEFIK_HOST",
         "TRAEFIK_HTTP2HTTPS",
+        "SMTP_FROM",
+        "SMTP_TO",
+        "SSH_USER",
+        "SCAN_INTERVAL_HOURS",
+        "EXPIRE_WARN_DAYS",
+        "EXPIRE_WARN_DAYS_2",
+        "ADMIN_USERNAME",
+        "ADMIN_EMAIL",
+        "ADMIN_PASSWORD",
+        "TZ",
     ]:
     agent.set_env(evar, original_environment[evar])
 
