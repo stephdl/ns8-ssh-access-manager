@@ -40,13 +40,13 @@ For a deeper look at the technical design, see the [DESIGN.md](https://github.co
 Instantiate the module with:
 
 ```
-add-module ghcr.io/stephdl/ssh-access-manager:latest 1
+add-module ghcr.io/stephdl/ns8-ssh-access-manager:latest 1
 ```
 
 The output of the command will return the instance name:
 
 ```json
-{"module_id": "ssh-access-manager1", "image_name": "ssh-access-manager", "image_url": "ghcr.io/stephdl/ssh-access-manager:latest"}
+{"module_id": "ssh-access-manager1", "image_name": "ns8-ssh-access-manager", "image_url": "ghcr.io/stephdl/ns8-ssh-access-manager:latest"}
 ```
 
 ## Configure
@@ -74,7 +74,7 @@ Launch `configure-module` with the following parameters:
 Example:
 
 ```
-api-cli run configure-module --agent module/ssh-access-manager1 --data - <<EOF
+api-cli run configure-module --agent module/ns8-ssh-access-manager1 --data - <<EOF
 {
   "host": "ssh-access-manager.domain.org",
   "http2https": true,
@@ -109,7 +109,7 @@ api-cli run get-configuration --agent module/ssh-access-manager1
 Both steps (preparing the remote host and registering it in the database) can be done with a single helper script. Enter the module environment first:
 
 ```bash
-runagent -m ssh-access-manager1
+runagent -m ns8-ssh-access-manager1
 ```
 
 Then use the `provision-server` script:
