@@ -26,7 +26,7 @@ ExecStart=/usr/bin/podman run --conmon-pidfile %t/sam-app.pid \
     --env-file %S/state/environment \
     --env-file %S/state/smarthost.env \
     --env-file %S/state/secrets.env \
-    ${SSH_ACCESS_MANAGER_IMAGE}
+    ${SAM_SERVER_IMAGE}
 ExecStop=/usr/bin/podman stop --ignore --cidfile %t/sam-app.ctr-id -t 10
 ExecReload=/usr/bin/podman kill -s HUP sam-app
 SyslogIdentifier=%u
