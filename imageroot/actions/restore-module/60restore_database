@@ -16,6 +16,15 @@ source <(grep -v '^#' secrets.env | sed 's/^/export /')
 # We restore by copying the dump into the running container and using
 # pg_restore via the UNIX socket at /run/postgresql.
 
+# Restore SSH collector keys and known_hosts
+podman cp collector_key     sam-app:/data/keys/collector_key
+podman cp collector_key.pub sam-app:/data/keys/collector_key.pub
+podman cp known_hosts       sam-app:/data/keys/known_hosts
+podman exec sam-app chown nobody:nobody /data/keys/collector_key /data/keys/known_hosts
+podman exec sam-app chown root:root /data/keys/collector_key.pub
+podman exec sam-app chmod 600 /data/keys/collector_key
+podman exec sam-app chmod 644 /data/keys/collector_key.pub /data/keys/known_hosts
+
 # Wait for PostgreSQL to be ready inside the container (supervisord starts it async)
 for i in $(seq 1 30); do
     podman exec sam-app \
@@ -42,4 +51,4 @@ podman exec sam-app \
 
 # Clean up
 podman exec sam-app rm -f /tmp/sam.pg_dump
-rm -f sam.pg_dump
+rm -f sam.pg_dump collector_key collector_key.pub known_hosts
