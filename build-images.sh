@@ -13,22 +13,22 @@ images=()
 # The image will be pushed to GitHub container registry
 repobase="${REPOBASE:-ghcr.io/stephdl}"
 # Configure the image name
-reponame="ns8-ssh-access-manager"
+reponame="sam"
 
 # Create a new empty container image
 container=$(buildah from scratch)
 
-# Reuse existing nodebuilder-ssh-access-manager container, to speed up builds
-if ! buildah containers --format "{{.ContainerName}}" | grep -q nodebuilder-ssh-access-manager; then
+# Reuse existing nodebuilder-sam container, to speed up builds
+if ! buildah containers --format "{{.ContainerName}}" | grep -q nodebuilder-sam; then
     echo "Pulling NodeJS runtime..."
-    buildah from --name nodebuilder-ssh-access-manager -v "${PWD}:/usr/src:Z" docker.io/library/node:lts
+    buildah from --name nodebuilder-sam -v "${PWD}:/usr/src:Z" docker.io/library/node:lts
 fi
 
 echo "Build static UI files with node..."
 buildah run \
     --workingdir=/usr/src/ui \
     --env="NODE_OPTIONS=--openssl-legacy-provider" \
-    nodebuilder-ssh-access-manager \
+    nodebuilder-sam \
     sh -c "yarn install && yarn build"
 
 # Add imageroot directory to the container image
@@ -40,7 +40,7 @@ buildah config --entrypoint=/ \
     --label="org.nethserver.tcp-ports-demand=1" \
     --label="org.nethserver.rootfull=0" \
     --label="org.nethserver.min-core=3.12.4-0" \
-    --label="org.nethserver.images=ghcr.io/stephdl/ssh-access-manager:0.0.1-dev.1" \
+    --label="org.nethserver.images=ghcr.io/stephdl/sam-server:0.0.1-dev.3" \
     "${container}"
 # Commit the image
 buildah commit "${container}" "${repobase}/${reponame}"

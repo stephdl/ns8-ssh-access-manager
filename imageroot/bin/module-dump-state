@@ -7,10 +7,15 @@
 
 set -e
 
-if ! systemctl --user -q is-active ssh-access-manager.service; then
+if ! systemctl --user -q is-active sam.service; then
     exit 0
 fi
 
 
 echo "Dumping ssh_manager postgres database"
-podman exec ssh-access-manager-app pg_dump -U ssh_manager --format=c  ssh_manager > ssh-access-manager.pg_dump
+podman exec sam-app pg_dump -U ssh_manager --format=c  ssh_manager > sam.pg_dump
+
+echo "Saving SSH collector keys and known_hosts"
+podman cp sam-app:/data/keys/collector_key     collector_key
+podman cp sam-app:/data/keys/collector_key.pub collector_key.pub
+podman cp sam-app:/data/keys/known_hosts        known_hosts

@@ -1,0 +1,38 @@
+#
+# Copyright (C) 2026 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+[Unit]
+Description=Podman  sam-app.service
+BindsTo=sam.service
+After=sam.service
+
+[Service]
+Environment=PODMAN_SYSTEMD_UNIT=%n
+EnvironmentFile=%S/state/environment
+EnvironmentFile=-%S/state/smarthost.env
+EnvironmentFile=-%S/state/secrets.env
+WorkingDirectory=%S/state
+Restart=always
+TimeoutStopSec=70
+ExecStartPre=/bin/mkdir -p tmp
+ExecStartPre=/bin/rm -f %t/sam-app.pid %t/sam-app.ctr-id
+ExecStartPre=-runagent discover-smarthost
+ExecStart=/usr/bin/podman run --conmon-pidfile %t/sam-app.pid \
+    --cidfile %t/sam-app.ctr-id --cgroups=no-conmon \
+    --pod-id-file %t/sam.pod-id --replace -d --name  sam-app \
+    --volume ssh_data:/data:z \
+    --env-file %S/state/environment \
+    --env-file %S/state/smarthost.env \
+    --env-file %S/state/secrets.env \
+    ${SAM_SERVER_IMAGE}
+ExecStop=/usr/bin/podman stop --ignore --cidfile %t/sam-app.ctr-id -t 10
+ExecReload=/usr/bin/podman kill -s HUP sam-app
+SyslogIdentifier=%u
+ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/sam-app.ctr-id
+PIDFile=%t/sam-app.pid
+Type=forking
+
+[Install]
+WantedBy=default.target

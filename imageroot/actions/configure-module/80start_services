@@ -13,5 +13,5 @@ exec 1>&2
 
 touch smarthost.env
 
-systemctl --user enable ssh-access-manager.service
-systemctl --user restart ssh-access-manager.service
+systemctl --user enable sam.service
+systemctl --user restart sam.service
