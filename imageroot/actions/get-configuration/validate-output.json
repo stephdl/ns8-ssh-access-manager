@@ -5,7 +5,7 @@
     "description": "Get ssh-access-manager settings",
     "examples": [
         {
-            "host": "ssh-access-manager.domain.org",
+            "host": "sam.domain.org",
             "http2https": true,
             "lets_encrypt": true
         }
@@ -19,7 +19,7 @@
     "properties": {
         "host": {
             "type": "string",
-            "description": "Host name for the application, like 'ssh-access-manager.domain.org'",
+            "description": "Host name for the application, like 'sam.domain.org'",
             "format": "idn-hostname"
         },
         "lets_encrypt": {
