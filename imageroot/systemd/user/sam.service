@@ -1,0 +1,35 @@
+#
+# Copyright (C) 2026 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+#
+# This systemd unit starts a sam instance using Podman.
+# Most parts of this file come from podman-generate-systemd.
+#
+
+[Unit]
+Description=Podman sam.service
+Requires=sam-app.service
+Before=sam-app.service
+
+[Service]
+Environment=PODMAN_SYSTEMD_UNIT=%n
+EnvironmentFile=-%S/state/environment
+Restart=always
+TimeoutStopSec=70
+ExecStartPre=/bin/rm -f %t/sam.pid %t/sam.pod-id
+ExecStartPre=/usr/bin/podman pod create --infra-conmon-pidfile %t/sam.pid \
+    --pod-id-file %t/sam.pod-id \
+    --name sam \
+    --publish 127.0.0.1:${TCP_PORT}:8080 \
+    --network=slirp4netns:allow_host_loopback=true \
+    --replace
+ExecStart=/usr/bin/podman pod start --pod-id-file %t/sam.pod-id
+ExecStop=/usr/bin/podman pod stop --ignore --pod-id-file %t/sam.pod-id -t 10
+ExecStopPost=/usr/bin/podman pod rm --ignore -f --pod-id-file %t/sam.pod-id
+PIDFile=%t/sam.pid
+Type=forking
+
+[Install]
+WantedBy=default.target
