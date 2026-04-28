@@ -5,4 +5,4 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
-rm -vf ssh-access-manager.pg_dump
+rm -vf sam.pg_dump

@@ -4,8 +4,8 @@
 # Copyright (C) 2026 Nethesis S.r.l.
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Provision a remote server and register it in the ssh-access-manager database.
-# Must be run inside the module environment: runagent -m ssh-access-managerN
+# Provision a remote server and register it in the sam database.
+# Must be run inside the module environment: runagent -m samN
 #
 # Usage: provision-server --hostname <hostname> --ip <ip> [options]
 #
@@ -60,17 +60,17 @@ echo "[provision-server] Step 1 — Provisioning remote host ${SSH_USER}@${IP} .
 # for the root password interactively (stdin must remain a tty for auth)
 TMPSCRIPT=$(mktemp /tmp/provision-host-XXXXXX.sh)
 trap 'rm -f "$TMPSCRIPT"' EXIT
-podman exec ssh-access-manager-app cat /app/provision-host.sh > "$TMPSCRIPT"
-PUBKEY=$(podman exec ssh-access-manager-app cat /data/keys/collector_key.pub)
+podman exec sam-app cat /app/provision-host.sh > "$TMPSCRIPT"
+PUBKEY=$(podman exec sam-app cat /data/keys/collector_key.pub)
 
 ssh "${SSH_USER}@${IP}" "sudo bash -s '${PUBKEY}'" < "$TMPSCRIPT"
 
 echo "[provision-server] Step 2 — Registering server '${HOSTNAME}' (${IP}) in the database ..."
-if podman exec ssh-access-manager-app \
+if podman exec sam-app \
     python3 /app/app/manage.py servers show "${HOSTNAME}" >/dev/null 2>&1; then
     echo "[provision-server] Server '${HOSTNAME}' already exists in the database, skipping registration."
 else
-    podman exec ssh-access-manager-app \
+    podman exec sam-app \
         python3 /app/app/manage.py servers add \
         --hostname "${HOSTNAME}" \
         --ip "${IP}" \
@@ -80,4 +80,4 @@ fi
 
 echo "[provision-server] Done. Server '${HOSTNAME}' is ready to be scanned."
 echo "[provision-server] Run the first scan :"
-podman exec ssh-access-manager-app python3 /app/app/manage.py servers scan --server ${HOSTNAME}
+podman exec sam-app python3 /app/app/manage.py servers scan --server ${HOSTNAME}
