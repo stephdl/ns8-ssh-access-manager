@@ -1,4 +1,4 @@
-# ns8-ssh-access-manager
+# sam
 
 NethServer 8 module for [ssh-access-manager](https://github.com/stephdl/ssh-access-manager) — an SSH access audit and management tool running in a single Alpine Linux container.
 
@@ -40,24 +40,24 @@ For a deeper look at the technical design, see the [DESIGN.md](https://github.co
 Instantiate the module with:
 
 ```
-add-module ghcr.io/stephdl/ns8-ssh-access-manager:latest 1
+add-module ghcr.io/stephdl/sam:latest 1
 ```
 
 The output of the command will return the instance name:
 
 ```json
-{"module_id": "ssh-access-manager1", "image_name": "ns8-ssh-access-manager", "image_url": "ghcr.io/stephdl/ns8-ssh-access-manager:latest"}
+{"module_id": "sam1", "image_name": "sam", "image_url": "ghcr.io/stephdl/sam:latest"}
 ```
 
 ## Configure
 
-Let's assume the instance is named `ssh-access-manager1`.
+Let's assume the instance is named `sam1`.
 
 Launch `configure-module` with the following parameters:
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `host` | string | yes | FQDN for the application, e.g. `ssh-access-manager.domain.org` |
+| `host` | string | yes | FQDN for the application, e.g. `sam.domain.org` |
 | `http2https` | boolean | no | Redirect HTTP to HTTPS (default: `true`) |
 | `lets_encrypt` | boolean | no | Request a Let's Encrypt certificate (default: `false`) |
 | `from` | string (email) | no | Sender address for email alerts (empty to disable) |
@@ -74,9 +74,9 @@ Launch `configure-module` with the following parameters:
 Example:
 
 ```
-api-cli run configure-module --agent module/ns8-ssh-access-manager1 --data - <<EOF
+api-cli run configure-module --agent module/sam1 --data - <<EOF
 {
-  "host": "ssh-access-manager.domain.org",
+  "host": "sam.domain.org",
   "http2https": true,
   "lets_encrypt": true,
   "from": "noreply@domain.org",
@@ -95,13 +95,13 @@ EOF
 
 The above command will:
 - generate secrets (`FLASK_SECRET_KEY`, `POSTGRES_PASSWORD`) on first run and persist them in `secrets.env`
-- start and configure the ssh-access-manager instance
+- start and configure the sam instance
 - configure a Traefik virtual host to expose the application
 
 ## Get the configuration
 
 ```
-api-cli run get-configuration --agent module/ssh-access-manager1
+api-cli run get-configuration --agent module/sam1
 ```
 
 ## Provision a remote server
@@ -109,7 +109,7 @@ api-cli run get-configuration --agent module/ssh-access-manager1
 Both steps (preparing the remote host and registering it in the database) can be done with a single helper script. Enter the module environment first:
 
 ```bash
-runagent -m ns8-ssh-access-manager1
+runagent -m sam1
 ```
 
 Then use the `provision-server` script:
@@ -155,7 +155,7 @@ The `from` and `to` email addresses are set via `configure-module` and can be le
 ## Uninstall
 
 ```
-remove-module --no-preserve ssh-access-manager1
+remove-module --no-preserve sam1
 ```
 
 ## Testing
@@ -163,7 +163,7 @@ remove-module --no-preserve ssh-access-manager1
 Test the module using the `test-module.sh` script:
 
 
-    ./test-module.sh <NODE_ADDR> ghcr.io/nethserver/ssh-access-manager:latest
+    ./test-module.sh <NODE_ADDR> ghcr.io/nethserver/sam:latest
 
 The tests are made using [Robot Framework](https://robotframework.org/)
 
