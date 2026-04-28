@@ -12,8 +12,5 @@ configure_retval = agent.tasks.run(agent_id=os.environ['AGENT_ID'], action='conf
     "host": os.environ["TRAEFIK_HOST"],
     "http2https": os.environ["TRAEFIK_HTTP2HTTPS"] == "True",
     "ssh_user": os.environ.get("SSH_USER", "audit-collector"),
-    "admin_username": os.environ.get("ADMIN_USERNAME", "admin"),
-    "admin_email": os.environ.get("ADMIN_EMAIL", "admin@example.com"),
-    "admin_password": os.environ.get("ADMIN_PASSWORD", "admin"),
 })
 agent.assert_exp(configure_retval['exit_code'] == 0, "The configure-module subtask failed!")

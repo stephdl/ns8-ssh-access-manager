@@ -60,16 +60,7 @@ Launch `configure-module` with the following parameters:
 | `host` | string | yes | FQDN for the application, e.g. `sam.domain.org` |
 | `http2https` | boolean | no | Redirect HTTP to HTTPS (default: `true`) |
 | `lets_encrypt` | boolean | no | Request a Let's Encrypt certificate (default: `false`) |
-| `from` | string (email) | no | Sender address for email alerts (empty to disable) |
-| `to` | string (email) | no | Recipient address for email alerts (empty to disable) |
 | `ssh_user` | string | no | Unix user created on remote servers for auditing (default: `audit-collector`) |
-| `scan_interval_hours` | string | no | Interval in hours between automatic scans (default: `4`) |
-| `expire_warn_days` | string | no | Days before key expiry for the first warning (default: `7`) |
-| `expire_warn_days_2` | string | no | Days before key expiry for the second warning (default: `2`) |
-| `admin_username` | string | no | Initial administrator username (default: `admin`) |
-| `admin_email` | string | no | Initial administrator email |
-| `admin_password` | string | no | Initial administrator password |
-| `tz` | string | no | Timezone (default: `UTC`) |
 
 Example:
 
@@ -79,16 +70,7 @@ api-cli run configure-module --agent module/sam1 --data - <<EOF
   "host": "sam.domain.org",
   "http2https": true,
   "lets_encrypt": true,
-  "from": "noreply@domain.org",
-  "to": "admin@domain.org",
   "ssh_user": "audit-collector",
-  "scan_interval_hours": "4",
-  "expire_warn_days": "7",
-  "expire_warn_days_2": "2",
-  "admin_username": "admin",
-  "admin_email": "admin@domain.org",
-  "admin_password": "changeme",
-  "tz": "Europe/Paris"
 }
 EOF
 ```
