@@ -30,22 +30,6 @@
             "type": "boolean",
             "title": "HTTP to HTTPS redirection",
             "description": "Redirect all the HTTP requests to HTTPS"
-        },
-        "from": {
-            "type": "string",
-            "description": "Email address used as sender in the smarthost configuration",
-            "anyOf": [
-                {"maxLength": 0},
-                {"format": "email"}
-            ]
-        },
-        "to": {
-            "type": "string",
-            "description": "Email address used as recipient in the smarthost configuration",
-            "anyOf": [
-                {"maxLength": 0},
-                {"format": "email"}
-            ]
         }
     }
 }
