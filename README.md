@@ -104,6 +104,27 @@ The above command will:
 api-cli run get-configuration --agent module/sam1
 ```
 
+## Reset user password
+
+Works for any user regardless of their role (admin, auditor, viewer). Enter the module environment first:
+
+```bash
+runagent -m sam1
+```
+
+Then use the `reset-password` script:
+
+```bash
+../bin/reset-password --username admin --password NewStr0ng#Pass!
+```
+
+| Option | Description |
+|---|---|
+| `--username` | Username to reset (required) |
+| `--password` | New password (required) |
+
+> Password policy is enforced by the container: at least 8 characters, at least one uppercase letter, at least one digit, at least one special character.
+
 ## Provision a remote server
 
 Both steps (preparing the remote host and registering it in the database) can be done with a single helper script. Enter the module environment first:
