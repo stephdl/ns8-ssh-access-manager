@@ -13,9 +13,9 @@
     }
   ],
   "docs": {
-    "documentation_url": "https://github.com/stephdl/sam/blob/main/README.md",
+    "documentation_url": "https://github.com/stephdl/ssh-access-manager/blob/main/README.md",
     "bug_url": "https://github.com/stephdl/dev/issues",
-    "code_url": "https://github.com/stephdl/sam"
+    "code_url": "https://github.com/stephdl/ssh-access-manager"
   },
   "source": "ghcr.io/stephdl/sam"
 }
