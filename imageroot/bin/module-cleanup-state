@@ -5,4 +5,4 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
-rm -vf sam.pg_dump
+rm -vf sam.pg_dump collector_key collector_key.pub known_hosts
