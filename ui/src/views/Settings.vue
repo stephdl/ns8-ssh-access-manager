@@ -30,6 +30,7 @@
               class="mg-bottom"
               :invalid-message="$t(error.host)"
               :disabled="loading.getConfiguration || loading.configureModule"
+              :helper-text="$t('settings.fqdn_default_credentials')"
               ref="host"
             >
             </cv-text-input>

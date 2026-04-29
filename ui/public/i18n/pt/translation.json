@@ -15,7 +15,8 @@
         "test_field": "Campo de teste",
         "configure_instance": "Configurar {instância}",
         "save": "Gravar",
-        "title": "Configurações"
+        "title": "Configurações",
+        "fqdn_default_credentials": "Credenciais padrão: login admin, senha admin"
     },
     "common": {
         "required": "Obrigatório",

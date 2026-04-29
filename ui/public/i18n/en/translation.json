@@ -38,7 +38,8 @@
     "instance_configuration": "Configure sam",
     "domain_already_used_in_traefik": "Domain already used in traefik",
     "host_pattern": "Must be a valid fully qualified domain name",
-    "host_format": "Must be a valid fully qualified domain name"
+    "host_format": "Must be a valid fully qualified domain name",
+    "fqdn_default_credentials": "Default credentials: login admin, password admin"
   },
   "about": {
     "title": "About"

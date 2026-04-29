@@ -15,7 +15,8 @@
         "test_field": "Proba-eremua",
         "configure_instance": "{instance} konfiguratu",
         "save": "Gorde",
-        "title": "Ezarpenak"
+        "title": "Ezarpenak",
+        "fqdn_default_credentials": "Lehenetsitako kredentzialak: sarbidea admin, pasahitza admin"
     },
     "common": {
         "required": "Beharrezkoa",
