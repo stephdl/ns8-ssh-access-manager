@@ -30,6 +30,7 @@
               class="mg-bottom"
               :invalid-message="$t(error.host)"
               :disabled="loading.getConfiguration || loading.configureModule"
+              :helper-text="$t('settings.fqdn_default_credentials')"
               ref="host"
             >
             </cv-text-input>
@@ -95,12 +96,12 @@
               }}</template>
             </cv-toggle>
             <!-- advanced options -->
-            <cv-accordion ref="accordion" class="maxwidth mg-bottom">
+            <!-- <cv-accordion ref="accordion" class="maxwidth mg-bottom">
               <cv-accordion-item :open="toggleAccordion[0]">
                 <template slot="title">{{ $t("settings.advanced") }}</template>
                 <template slot="content"> </template>
               </cv-accordion-item>
-            </cv-accordion>
+            </cv-accordion> -->
             <cv-row v-if="error.configureModule">
               <cv-column>
                 <NsInlineNotification

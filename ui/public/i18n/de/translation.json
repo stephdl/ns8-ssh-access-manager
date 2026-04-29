@@ -15,7 +15,8 @@
         "test_field": "Testfeld",
         "configure_instance": "{instance} konfigurieren",
         "save": "Speichern",
-        "title": "Einstellungen"
+        "title": "Einstellungen",
+        "fqdn_default_credentials": "Standard-Anmeldedaten: Anmeldung admin, Passwort admin"
     },
     "common": {
         "required": "erforderlich",

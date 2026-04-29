@@ -24,7 +24,8 @@
         "save": "Salva",
         "title": "Impostazioni",
         "configure_instance": "Configura {instance}",
-        "test_field": "Campo di test"
+        "test_field": "Campo di test",
+        "fqdn_default_credentials": "Credenziali predefinite: login admin, password admin"
     },
     "error": {
         "error": "Errore",
