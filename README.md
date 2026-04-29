@@ -100,6 +100,12 @@ Then use the `provision-server` script:
 ../bin/provision-server --hostname server-prod-01 --ip 192.168.1.100 --user root --env production --os rhel
 ```
 
+If the SSH daemon listens on a non-standard port, pass `--port`:
+
+```bash
+../bin/provision-server --hostname server-prod-01 --ip 192.168.1.100 --port 2222 --user root --env production --os rhel
+```
+
 Options:
 
 | Option | Default | Description |
@@ -107,6 +113,7 @@ Options:
 | `--hostname` | — | Server hostname (required) |
 | `--ip` | — | Server IP address (required) |
 | `--user` | `root` | SSH user to connect with |
+| `--port` | `22` | SSH port on the remote server |
 | `--env` | `production` | Environment: `production`, `staging`, `development` |
 | `--os` | `other` | OS family: `rhel`, `debian`, `ubuntu`, `alpine`, `other` |
 
