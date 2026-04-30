@@ -40,7 +40,7 @@ buildah config --entrypoint=/ \
     --label="org.nethserver.tcp-ports-demand=1" \
     --label="org.nethserver.rootfull=0" \
     --label="org.nethserver.min-core=3.12.4-0" \
-    --label="org.nethserver.images=ghcr.io/stephdl/sam-server:0.0.1-dev.7" \
+    --label="org.nethserver.images=ghcr.io/stephdl/sam-server:0.0.1-dev.8" \
     "${container}"
 # Commit the image
 buildah commit "${container}" "${repobase}/${reponame}"
