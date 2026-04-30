@@ -154,25 +154,45 @@ Options:
 
 This method ensures the root password is **never given to SAM**, not even indirectly. You push the SAM collector's public key to the remote server yourself (in your terminal), and then let `provision-server` connect using that key.
 
-#### Step 1 — Push the collector public key to the remote server
+#### Step 1 — Prepare the container's SSH directory (once per NS8 node)
+
+The container's `~/.ssh` directory may not exist by default. Create it once:
 
 ```bash
 runagent -m sam1
-podman exec -it sam-app ssh-copy-id -i /data/keys/collector_key.pub -p 22 root@192.168.1.100
+podman exec sam-app mkdir -p /root/.ssh
+```
+
+#### Step 2 — Push the collector public key to the remote server
+
+```bash
+podman exec -it -e TMPDIR=/tmp sam-app \
+    ssh-copy-id -i /data/keys/collector_key.pub -p 22 root@192.168.1.100
 ```
 
 `ssh-copy-id` will ask for the root password **once**, directly in your terminal (not through SAM). After this, the container can authenticate to that server as root without a password.
 
-For a non-standard SSH port, change `-p 22` accordingly:
+For a non-standard SSH port (e.g. 2222):
 
 ```bash
-podman exec -it sam-app ssh-copy-id -i /data/keys/collector_key.pub -p 2222 root@192.168.1.100
+podman exec -it -e TMPDIR=/tmp sam-app \
+    ssh-copy-id -i /data/keys/collector_key.pub -p 2222 root@192.168.12.140
 ```
 
-#### Step 2 — Provision using the container key (no password)
+> **Note**: the `-e TMPDIR=/tmp` flag is required because the container's default `TMPDIR` may be unset or point to a non-existent path, which causes `ssh-copy-id` to fail with `mktemp: : No such file or directory`. You may also see harmless warnings like `expr: syntax error` or `expr: warning: '^ERROR:'` — these are cosmetic bugs in the `ssh-copy-id` script itself and do not affect the result.
+
+#### Step 3 — Provision using the container key (no password)
+
+Standard port:
 
 ```bash
 ../bin/provision-server --hostname server-prod-01 --ip 192.168.1.100 --user root --env production --os rhel --use-container-key
+```
+
+Non-standard port:
+
+```bash
+../bin/provision-server --hostname server-prod-01 --ip 192.168.12.140 --port 2222 --user root --env production --os rhel --use-container-key
 ```
 
 The `--use-container-key` flag makes `provision-server` run the SSH connection from **inside the container**, using the collector's private key at `/data/keys/collector_key`. No password prompt, SAM never handles root credentials.
