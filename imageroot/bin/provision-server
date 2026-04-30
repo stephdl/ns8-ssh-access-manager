@@ -91,10 +91,12 @@ if podman exec sam-app \
     python3 /app/app/manage.py servers show "${HOSTNAME}" >/dev/null 2>&1; then
     echo "[provision-server] Server '${HOSTNAME}' already exists in the database, skipping registration."
 else
-    podman exec sam-app \
+    podman exec -it sam-app \
         python3 /app/app/manage.py servers add \
         --hostname "${HOSTNAME}" \
         --ip "${IP}" \
+        --port "${SSH_PORT}" \
+        --ssh-user "${SSH_USER}" \
         --env "${ENV}" \
         --os "${OS}"
 fi
