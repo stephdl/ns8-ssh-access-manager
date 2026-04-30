@@ -176,7 +176,7 @@ For a non-standard SSH port (e.g. 2222):
 
 ```bash
 podman exec -it -e TMPDIR=/tmp sam-app \
-    ssh-copy-id -i /data/keys/collector_key.pub -p 2222 root@192.168.12.140
+    ssh-copy-id -i /data/keys/collector_key.pub -p 2222 root@192.168.1.140
 ```
 
 > **Note**: the `-e TMPDIR=/tmp` flag is required because the container's default `TMPDIR` may be unset or point to a non-existent path, which causes `ssh-copy-id` to fail with `mktemp: : No such file or directory`. You may also see harmless warnings like `expr: syntax error` or `expr: warning: '^ERROR:'` — these are cosmetic bugs in the `ssh-copy-id` script itself and do not affect the result.
@@ -192,7 +192,7 @@ Standard port:
 Non-standard port:
 
 ```bash
-../bin/provision-server --hostname server-prod-01 --ip 192.168.12.140 --port 2222 --user root --env production --os rhel --use-container-key
+../bin/provision-server --hostname server-prod-01 --ip 192.168.1.140 --port 2222 --user root --env production --os rhel --use-container-key
 ```
 
 The `--use-container-key` flag makes `provision-server` run the SSH connection from **inside the container**, using the collector's private key at `/data/keys/collector_key`. No password prompt, SAM never handles root credentials.
