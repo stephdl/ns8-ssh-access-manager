@@ -88,6 +88,8 @@ api-cli run get-configuration --agent module/sam1
 
 ## Provision a remote server
 
+> **Prerequisites**: `sudo` must be installed and available on the remote server. The provisioning script configures a `sudo` delegation for `audit-collector` — without `sudo`, the setup will fail and SAM will be unable to collect SSH keys or perform any action on that server.
+
 Provisioning a server has two distinct phases:
 
 1. **Host preparation** — create the `audit-collector` Unix user, deploy the SAM scripts, and configure the `sudo` delegation on the remote server.
@@ -255,8 +257,6 @@ Comfortable typing root password in a web form?
                           └─ No  → Method 4 (place key manually + --use-container-key)
 ```
 
-The server can also be declared manually via the web UI: **Dashboard → + Add server**.
-
 The collector public key is visible in the web UI at **Dashboard > Collector public key**.
 
 ## Workflow overview
@@ -348,9 +348,9 @@ After the first `configure-module`, the web UI is accessible with the following 
 
 > **Change the password immediately** after the first login. The default `admin`/`admin` credentials are well-known and must not be left in place on any production instance. Use the web UI (profile menu → Change password) or the `reset-password` script below.
 
-### Resetting a password from the CLI
+### Resetting a SAM administrator password from the CLI
 
-Works for any user regardless of their role. Enter the module environment first:
+Works for any SAM administrator account (web UI login), regardless of their role. This has no effect on Linux accounts on remote servers. Enter the module environment first:
 
 ```bash
 runagent -m sam1
