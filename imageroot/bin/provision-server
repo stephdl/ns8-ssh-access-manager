@@ -19,15 +19,19 @@ Usage: $(basename "$0") --hostname HOSTNAME --ip IP [OPTIONS]
 Provision a remote host for SSH auditing and register it in the database.
 
 Required:
-  --hostname HOSTNAME   Server hostname (e.g. server-prod-01)
-  --ip       IP         Server IP address (e.g. 192.168.1.10)
+  --hostname HOSTNAME        Server hostname (e.g. server-prod-01)
+  --ip       IP              Server IP address (e.g. 192.168.1.10)
 
 Options:
-  --user     USER       SSH user to connect with (default: root)
-  --port     PORT       SSH port (default: 22)
-  --env      ENV        Environment: production, staging, development (default: production)
-  --os       OS         OS family: rhel, debian, ubuntu, alpine, other (default: other)
-  -h, --help            Show this help message
+  --user     USER            SSH user to connect with (default: root)
+  --port     PORT            SSH port (default: 22)
+  --env      ENV             Environment: production, staging, development (default: production)
+  --os       OS              OS family: rhel, debian, ubuntu, alpine, other (default: other)
+  --use-container-key        Use the collector private key from the container to authenticate
+                             (requires the key to already be in the remote user's authorized_keys —
+                              run once: podman exec sam-app mkdir -p /root/.ssh && \
+                                        podman exec -it -e TMPDIR=/tmp sam-app ssh-copy-id -i /data/keys/collector_key.pub -p PORT USER@IP)
+  -h, --help                 Show this help message
 EOF
 }
 
@@ -37,16 +41,18 @@ SSH_USER="root"
 SSH_PORT="22"
 ENV="production"
 OS="other"
+USE_CONTAINER_KEY=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --hostname) HOSTNAME="$2"; shift 2 ;;
-        --ip)       IP="$2";       shift 2 ;;
-        --user)     SSH_USER="$2"; shift 2 ;;
-        --port)     SSH_PORT="$2"; shift 2 ;;
-        --env)      ENV="$2";      shift 2 ;;
-        --os)       OS="$2";       shift 2 ;;
-        -h|--help)  usage; exit 0 ;;
+        --hostname)          HOSTNAME="$2"; shift 2 ;;
+        --ip)                IP="$2";       shift 2 ;;
+        --user)              SSH_USER="$2"; shift 2 ;;
+        --port)              SSH_PORT="$2"; shift 2 ;;
+        --env)               ENV="$2";      shift 2 ;;
+        --os)                OS="$2";       shift 2 ;;
+        --use-container-key) USE_CONTAINER_KEY=true; shift ;;
+        -h|--help)           usage; exit 0 ;;
         *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
     esac
 done
@@ -59,24 +65,42 @@ fi
 
 echo "[provision-server] Step 1 — Provisioning remote host ${SSH_USER}@${IP} ..."
 
-# Write the provision script to a temp file so that SSH can still prompt
-# for the root password interactively (stdin must remain a tty for auth)
 TMPSCRIPT=$(mktemp /tmp/provision-host-XXXXXX.sh)
 trap 'rm -f "$TMPSCRIPT"' EXIT
 podman exec sam-app cat /app/provision-host.sh > "$TMPSCRIPT"
 PUBKEY=$(podman exec sam-app cat /data/keys/collector_key.pub)
 
-ssh -p "${SSH_PORT}" "${SSH_USER}@${IP}" "sudo bash -s '${PUBKEY}'" < "$TMPSCRIPT"
+if [[ "$USE_CONTAINER_KEY" == "true" ]]; then
+    # Run SSH from inside the container using the collector private key.
+    # The collector key must already be present in the remote user's authorized_keys.
+    # Run first: podman exec sam-app mkdir -p /root/.ssh &&
+    #            podman exec -it -e TMPDIR=/tmp sam-app ssh-copy-id -i /data/keys/collector_key.pub -p "${SSH_PORT}" "${SSH_USER}@${IP}"
+    podman exec -i sam-app \
+        ssh \
+        -i /data/keys/collector_key \
+        -p "${SSH_PORT}" \
+        -o StrictHostKeyChecking=accept-new \
+        -o BatchMode=yes \
+        -o ConnectTimeout=10 \
+        "${SSH_USER}@${IP}" \
+        "sudo bash -s '${PUBKEY}'" < "$TMPSCRIPT"
+else
+    # Default: SSH from the NS8 host — will prompt for password interactively
+    ssh -p "${SSH_PORT}" "${SSH_USER}@${IP}" "sudo bash -s '${PUBKEY}'" < "$TMPSCRIPT"
+fi
 
 echo "[provision-server] Step 2 — Registering server '${HOSTNAME}' (${IP}) in the database ..."
 if podman exec sam-app \
     python3 /app/app/manage.py servers show "${HOSTNAME}" >/dev/null 2>&1; then
     echo "[provision-server] Server '${HOSTNAME}' already exists in the database, skipping registration."
 else
-    podman exec sam-app \
+    podman exec -it sam-app \
         python3 /app/app/manage.py servers add \
         --hostname "${HOSTNAME}" \
         --ip "${IP}" \
+        --port "${SSH_PORT}" \
+        --ssh-user "${SSH_USER}" \
+        --ssh-password "" \
         --env "${ENV}" \
         --os "${OS}"
 fi

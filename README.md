@@ -88,19 +88,49 @@ api-cli run get-configuration --agent module/sam1
 
 ## Provision a remote server
 
-Both steps (preparing the remote host and registering it in the database) can be done with a single helper script. Enter the module environment first:
+> **Prerequisites**: `sudo` must be installed and available on the remote server. The provisioning script configures a `sudo` delegation for `audit-collector` — without `sudo`, the setup will fail and SAM will be unable to collect SSH keys or perform any action on that server.
+
+Provisioning a server has two distinct phases:
+
+1. **Host preparation** — create the `audit-collector` Unix user, deploy the SAM scripts, and configure the `sudo` delegation on the remote server.
+2. **Database registration** — declare the server in SAM so it can be scanned.
+
+The main difference between the four methods below is **how you authenticate** for the host-preparation step. Choose the one that matches your security policy.
+
+### Overview
+
+| Method | Authentication | Root password given to SAM? | Requires NS8 CLI? |
+|---|---|---|---|
+| [1. SAM UI](#method-1--sam-web-ui-easiest) | root password in the web form | ✅ Yes | No |
+| [2. `provision-server` (interactive)](#method-2--provision-server-interactive-password) | root password via OpenSSH | No — transits through OpenSSH only | Yes |
+| [3. `ssh-copy-id` + `provision-server --use-container-key`](#method-3--ssh-copy-id--provision-server-paranoid) | key-based (collector key) | ⚠️ Once (for `ssh-copy-id` only) | Yes |
+| [4. Fully manual](#method-4--manual-key-placement--provision-server-maximum-control) | manual key placement (any access method) | ❌ Never | Yes |
+
+---
+
+### Method 1 — SAM web UI (easiest)
+
+Open the SAM web UI, go to **Dashboard → + Add server**, and fill in the hostname, IP address, and root credentials. SAM connects as root, runs the provisioning script, and registers the server automatically.
+
+**When to use**: quick setup on a trusted, private network where transmitting the root password over HTTPS is acceptable.
+
+> ⚠️ The root password is sent through the SAM web form. Make sure HTTPS is enabled (`lets_encrypt: true` or a valid certificate).
+
+---
+
+### Method 2 — `provision-server` interactive password
+
+Run the helper script from the NS8 host. The script calls the standard OpenSSH client (`ssh`) from the NS8 node, which follows normal SSH authentication order:
+
+1. **Key-based first** — if the NS8 module user (`sam1`) already has an SSH key pair and its public key is present in `root@remote:~/.ssh/authorized_keys`, the connection succeeds **with no password prompt at all**.
+2. **Password fallback** — if no key is found or accepted, OpenSSH prompts for the root password directly in your terminal. The password transits through OpenSSH only — it is never seen, stored, or logged by SAM.
 
 ```bash
 runagent -m sam1
-```
-
-Then use the `provision-server` script:
-
-```bash
 ../bin/provision-server --hostname server-prod-01 --ip 192.168.1.100 --user root --env production --os rhel
 ```
 
-If the SSH daemon listens on a non-standard port, pass `--port`:
+With a non-standard SSH port:
 
 ```bash
 ../bin/provision-server --hostname server-prod-01 --ip 192.168.1.100 --port 2222 --user root --env production --os rhel
@@ -116,12 +146,116 @@ Options:
 | `--port` | `22` | SSH port on the remote server |
 | `--env` | `production` | Environment: `production`, `staging`, `development` |
 | `--os` | `other` | OS family: `rhel`, `debian`, `ubuntu`, `alpine`, `other` |
+| `--use-container-key` | — | Use the collector private key (see Method 3) |
 
-The script:
-1. Deploys the `audit-collector` user, SSH key, and sudoers rules on the target server (idempotent — safe to re-run after a rebuild or sudoers change).
-2. Registers the server in the database.
+**When to use**: the root password is typed directly in the terminal, never seen by SAM. Good default for most environments.
 
-The server can also be declared manually via the web UI: **Dashboard → + Add server**.
+---
+
+### Method 3 — `ssh-copy-id` + `provision-server` (paranoid)
+
+This method ensures the root password is **never given to SAM**, not even indirectly. You push the SAM collector's public key to the remote server yourself (in your terminal), and then let `provision-server` connect using that key.
+
+#### Step 1 — Prepare the container's SSH directory (once per NS8 node)
+
+The container's `~/.ssh` directory may not exist by default. Create it once:
+
+```bash
+runagent -m sam1
+podman exec sam-app mkdir -p /root/.ssh
+```
+
+#### Step 2 — Push the collector public key to the remote server
+
+```bash
+podman exec -it -e TMPDIR=/tmp sam-app \
+    ssh-copy-id -i /data/keys/collector_key.pub -p 22 root@192.168.1.100
+```
+
+`ssh-copy-id` will ask for the root password **once**, directly in your terminal (not through SAM). After this, the container can authenticate to that server as root without a password.
+
+For a non-standard SSH port (e.g. 2222):
+
+```bash
+podman exec -it -e TMPDIR=/tmp sam-app \
+    ssh-copy-id -i /data/keys/collector_key.pub -p 2222 root@192.168.1.140
+```
+
+> **Note**: the `-e TMPDIR=/tmp` flag is required because the container's default `TMPDIR` may be unset or point to a non-existent path, which causes `ssh-copy-id` to fail with `mktemp: : No such file or directory`. You may also see harmless warnings like `expr: syntax error` or `expr: warning: '^ERROR:'` — these are cosmetic bugs in the `ssh-copy-id` script itself and do not affect the result.
+
+#### Step 3 — Provision using the container key (no password)
+
+Standard port:
+
+```bash
+../bin/provision-server --hostname server-prod-01 --ip 192.168.1.100 --user root --env production --os rhel --use-container-key
+```
+
+Non-standard port:
+
+```bash
+../bin/provision-server --hostname server-prod-01 --ip 192.168.1.140 --port 2222 --user root --env production --os rhel --use-container-key
+```
+
+The `--use-container-key` flag makes `provision-server` run the SSH connection from **inside the container**, using the collector's private key at `/data/keys/collector_key`. No password prompt, SAM never handles root credentials.
+
+**When to use**: security-conscious environments. The root password is entered once in a terminal for `ssh-copy-id`, then never required again. SAM only ever uses its own key.
+
+> 💡 After provisioning, you can revoke root access for the collector key if you wish — `audit-collector` is the only user SAM will ever use for day-to-day operations.
+
+---
+
+### Method 4 — Manual key placement + `provision-server` (maximum control)
+
+Same principle as Method 3 but without `ssh-copy-id`: you place the collector public key in root's `authorized_keys` yourself, using whatever access you already have (console, existing SSH session, Ansible, configuration management…). SAM's root password is never involved at any point.
+
+#### Step 1 — Retrieve the collector public key
+
+```bash
+runagent -m sam1
+podman exec sam-app cat /data/keys/collector_key.pub
+```
+
+Copy the output (a single line starting with `ssh-ed25519 ...`).
+
+#### Step 2 — Add the key to the remote server manually
+
+Connect to the remote server by any means available to you (console, bastion, existing privileged account), then append the key:
+
+```bash
+# On the remote server, as root:
+mkdir -p /root/.ssh
+chmod 700 /root/.ssh
+echo "ssh-ed25519 AAAA... paste-your-collector-key-here" >> /root/.ssh/authorized_keys
+chmod 600 /root/.ssh/authorized_keys
+```
+
+#### Step 3 — Provision using the container key (no password)
+
+Back on the NS8 host, inside the module environment:
+
+```bash
+runagent -m sam1
+../bin/provision-server --hostname server-prod-01 --ip 192.168.1.100 --user root --env production --os rhel --use-container-key
+```
+
+`provision-server` connects as root using the collector private key (no password prompt), runs `provision-host.sh` on the remote server (creates the `audit-collector` user, deploys the SAM scripts, configures sudoers), and registers the server in the database.
+
+**When to use**: environments where `podman exec` is not available interactively, or where you prefer to place keys through a controlled channel (Ansible, Puppet, a jump host) rather than running `ssh-copy-id` from the NS8 node.
+
+---
+
+### Which method should I choose?
+
+```
+Comfortable typing root password in a web form?
+  └─ Yes → Method 1 (UI)
+  └─ No  → Comfortable typing it in a terminal?
+              └─ Yes → Method 2 (provision-server, interactive)
+              └─ No  → Can you run podman exec on the NS8 node?
+                          └─ Yes → Method 3 (ssh-copy-id + --use-container-key)
+                          └─ No  → Method 4 (place key manually + --use-container-key)
+```
 
 The collector public key is visible in the web UI at **Dashboard > Collector public key**.
 
@@ -214,9 +348,9 @@ After the first `configure-module`, the web UI is accessible with the following 
 
 > **Change the password immediately** after the first login. The default `admin`/`admin` credentials are well-known and must not be left in place on any production instance. Use the web UI (profile menu → Change password) or the `reset-password` script below.
 
-### Resetting a password from the CLI
+### Resetting a SAM administrator password from the CLI
 
-Works for any user regardless of their role. Enter the module environment first:
+Works for any SAM administrator account (web UI login), regardless of their role. This has no effect on Linux accounts on remote servers. Enter the module environment first:
 
 ```bash
 runagent -m sam1
