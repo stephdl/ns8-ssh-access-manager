@@ -29,7 +29,7 @@ Options:
   --os       OS              OS family: rhel, debian, ubuntu, alpine, other (default: other)
   --use-container-key        Use the collector private key from the container to authenticate
                              (requires the key to already be in the remote user's authorized_keys —
-                              see: podman exec -it sam-app ssh-copy-id -i /data/keys/collector_key.pub USER@IP)
+                              see: podman exec -it -e TMPDIR=/tmp sam-app ssh-copy-id -i /data/keys/collector_key.pub -p PORT USER@IP)
   -h, --help                 Show this help message
 EOF
 }
@@ -97,6 +97,7 @@ else
         --ip "${IP}" \
         --port "${SSH_PORT}" \
         --ssh-user "${SSH_USER}" \
+        --ssh-password "" \
         --env "${ENV}" \
         --os "${OS}"
 fi
