@@ -259,6 +259,25 @@ Comfortable typing root password in a web form?
 
 The collector public key is visible in the web UI at **Dashboard > Collector public key**.
 
+---
+
+### Monitoring the NS8 host itself
+
+> **Important**: if you want SAM to monitor the NS8 node it runs on, always declare port **22** for that server — **not** any custom port configured for external SSH access.
+
+NS8 recommends redirecting external SSH traffic from a non-standard port (e.g. 2222) to port 22 using a firewalld port forward — see [NS8 firewall documentation — SSH redirection](https://docs.nethserver.org/projects/ns8/en/latest/firewall.html#ssh-redirection). This redirection only applies to traffic arriving on **external interfaces**. Connections originating from the same host (loopback or internal network) bypass the rule entirely: `sshd` is always reachable directly on port **22** locally.
+
+If you declare port 2222 when adding the NS8 node itself to SAM, the connection will fail because the forward does not apply to local traffic.
+
+Example — provisioning the NS8 host itself:
+
+```bash
+runagent -m sam1
+../bin/provision-server --hostname ns8-node --ip 127.0.0.1 --port 22 --user root --env production --os rhel
+```
+
+The same applies when registering the server through the web UI: enter **22** in the port field regardless of which port is exposed externally.
+
 ## Workflow overview
 
 1. **Provision** each remote server (see above).
