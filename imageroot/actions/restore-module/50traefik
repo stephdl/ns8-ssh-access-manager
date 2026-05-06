@@ -15,7 +15,6 @@ renv = request['environment']
 
 configure_retval = agent.tasks.run(agent_id=os.environ['AGENT_ID'], action='configure-module', data={
     "host": renv["TRAEFIK_HOST"],
-    "http2https": renv["TRAEFIK_HTTP2HTTPS"] == "True",
     "ssh_user": renv.get("SSH_USER", "audit-collector"),
     "admin_username": renv.get("ADMIN_USERNAME", "admin"),
     "admin_email": renv.get("ADMIN_EMAIL", "admin@example.com"),
