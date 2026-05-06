@@ -1,0 +1,72 @@
+{
+    "common": {
+        "required": "Requis",
+        "work_in_progress": "En cours",
+        "processing": "Traitement en cours..."
+    },
+    "status": {
+        "title": "État",
+        "app_instance": "Instance de l'application",
+        "services": "Service | Services",
+        "app_images": "Image de l'application | Images de l'application",
+        "app_volumes": "Volume de l'application | Volumes de l'application",
+        "installation_node": "Nœud d'installation",
+        "node": "Nœud",
+        "name": "Nom",
+        "size": "Taille",
+        "created": "Créé",
+        "mount": "Point de montage",
+        "no_services": "Aucun service",
+        "no_images": "Aucune image",
+        "no_volumes": "Aucun volume",
+        "sam_webapp": "Application web sam",
+        "not_configured": "Non configuré",
+        "open_webapp": "Ouvrir sam",
+        "configure": "Configurer"
+    },
+    "settings": {
+        "title": "Paramètres",
+        "configure_instance": "Configurer {instance}",
+        "save": "Sauvegarder",
+        "sam_fqdn": "Nom d'hôte sam (FQDN)",
+        "lets_encrypt": "Demander un certificat Let's Encrypt",
+        "enabled": "Activé",
+        "disabled": "Désactivé",
+        "advanced": "Avancé",
+        "configuring": "Configuration en cours",
+        "instance_configuration": "Configurer sam",
+        "domain_already_used_in_traefik": "Domaine déjà utilisé dans Traefik",
+        "host_pattern": "Doit être un nom de domaine pleinement qualifié valide",
+        "host_format": "Doit être un nom de domaine pleinement qualifié valide",
+        "fqdn_default_credentials": "Identifiants par défaut : login admin, mot de passe admin"
+    },
+    "about": {
+        "title": "À propos"
+    },
+    "task": {
+        "cannot_create_task": "Impossible de créer la tâche {action}"
+    },
+    "action": {
+        "get-status": "Obtenir le statut",
+        "get-configuration": "Obtenir la configuration",
+        "configure-module": "Configurer le module",
+        "get-module-info": "Obtenir les informations du module",
+        "get-name": "Obtenir le nom",
+        "list-backup-repositories": "Lister les dépôts de sauvegarde",
+        "list-backups": "Lister les sauvegardes",
+        "list-installed-modules": "Lister les modules installés"
+    },
+    "error": {
+        "error": "Erreur",
+        "generic_error": "Une erreur est survenue",
+        "validation_error": "Erreur de validation",
+        "network_error": "Erreur réseau",
+        "network_timeout": "Délai réseau dépassé",
+        "401": "Authentification invalide",
+        "403": "Opération non autorisée",
+        "404": "Ressource introuvable",
+        "cannot_retrieve_module_info": "Impossible de récupérer les informations du module",
+        "cannot_retrieve_installed_modules": "Impossible de récupérer les modules installés",
+        "cannot_retrieve_configuration": "Impossible de récupérer la configuration"
+    }
+}
