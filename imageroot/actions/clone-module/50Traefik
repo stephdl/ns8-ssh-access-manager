@@ -10,7 +10,6 @@ import os
 
 configure_retval = agent.tasks.run(agent_id=os.environ['AGENT_ID'], action='configure-module', data={
     "host": os.environ["TRAEFIK_HOST"],
-    "http2https": os.environ["TRAEFIK_HTTP2HTTPS"] == "True",
     "ssh_user": os.environ.get("SSH_USER", "audit-collector"),
 })
 agent.assert_exp(configure_retval['exit_code'] == 0, "The configure-module subtask failed!")

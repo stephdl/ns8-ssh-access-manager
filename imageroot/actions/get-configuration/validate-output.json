@@ -6,14 +6,12 @@
     "examples": [
         {
             "host": "sam.domain.org",
-            "http2https": true,
             "lets_encrypt": true
         }
     ],
     "type": "object",
     "required": [
         "host",
-        "http2https",
         "lets_encrypt"
     ],
     "properties": {
@@ -26,11 +24,6 @@
             "type": "boolean",
             "title": "Let's Encrypt certificate",
             "description": "Request a valid Let's Encrypt certificate."
-        },
-        "http2https": {
-            "type": "boolean",
-            "title": "HTTP to HTTPS redirection",
-            "description": "Redirect all the HTTP requests to HTTPS"
         }
     }
 }
