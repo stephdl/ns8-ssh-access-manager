@@ -58,9 +58,10 @@ Launch `configure-module` with the following parameters:
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `host` | string | yes | FQDN for the application, e.g. `sam.domain.org` |
-| `http2https` | boolean | no | Redirect HTTP to HTTPS (default: `true`) |
 | `lets_encrypt` | boolean | no | Request a Let's Encrypt certificate (default: `false`) |
 | `ssh_user` | string | no | Unix user created on remote servers for auditing (default: `audit-collector`) |
+
+> HTTP to HTTPS redirection is always enabled and cannot be disabled — SAM is a security tool and must be served over HTTPS.
 
 Example:
 
@@ -68,9 +69,8 @@ Example:
 api-cli run configure-module --agent module/sam1 --data - <<EOF
 {
   "host": "sam.domain.org",
-  "http2https": true,
   "lets_encrypt": true,
-  "ssh_user": "audit-collector",
+  "ssh_user": "audit-collector"
 }
 EOF
 ```
