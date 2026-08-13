@@ -16,6 +16,13 @@ smtp_settings = agent.get_smarthost_settings(rdb)
 
 envfile = "smarthost.env"
 
+# The app falls back to ssh-manager@example.com, which every relay bounces
+# (example.com publishes a null MX). Derive the sender from the configured
+# virtual host instead: sam.example.org -> no-reply@example.org.
+traefik_host = os.environ.get("TRAEFIK_HOST", "")
+_, _, mail_domain = traefik_host.partition(".")
+smtp_from = f"no-reply@{mail_domain}" if mail_domain else ""
+
 # Using .tmp suffix: do not overwrite the target file until the new one is
 # saved to disk:
 with open(envfile + ".tmp", "w") as efp:
@@ -27,6 +34,8 @@ with open(envfile + ".tmp", "w") as efp:
     print(f"SMTP_PASSWORD={smtp_settings['password']}", file=efp)
     print(f"SMTP_ENCRYPTION={smtp_settings['encrypt_smtp']}", file=efp)
     print(f"SMTP_TLSVERIFY={'1' if smtp_settings['tls_verify'] else ''}", file=efp)
+    if smtp_from:
+        print(f"SMTP_FROM={smtp_from}", file=efp)
 
 # Commit changes by replacing the existing envfile:
 os.replace(envfile + ".tmp", envfile)
