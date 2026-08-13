@@ -11,10 +11,10 @@ exec 1>&2 # Redirect any output to the journal (stderr)
 # Read secrets
 source <(grep -v '^#' secrets.env | sed 's/^/export /')
 
-# PostgreSQL runs embedded inside the sam-server container,
-# managed by supervisord. Data is stored at /data/pg inside the container.
-# We restore by copying the dump into the running container and using
-# pg_restore via the UNIX socket at /run/postgresql.
+# PostgreSQL runs embedded inside the sam-server container, managed by
+# supervisord, with its data at /data/pg. We restore by copying the dump into
+# the running container: administrative statements go through the UNIX socket
+# as the postgres superuser, the restore itself over TCP as ssh_manager.
 
 # Wait for PostgreSQL to be ready inside the container (supervisord starts it async)
 for i in $(seq 1 30); do
@@ -26,10 +26,14 @@ done
 # Copy the dump file into the container
 podman cp sam.pg_dump sam-server:/tmp/sam.pg_dump
 
-# Drop and recreate the database to avoid conflicts, then restore
+# Drop and recreate the database to avoid conflicts, then restore.
+# WITH (FORCE) because supervisord has already started Flask and crond by the
+# time this runs: a connection from the pool or from a collect/expire cycle
+# makes a plain DROP fail with "database is being accessed by other users",
+# and the failure lands between the drop and the restore.
 podman exec sam-server \
     su -s /bin/sh postgres -c \
-    "psql -h /run/postgresql -c 'DROP DATABASE IF EXISTS ssh_manager;' \
+    "psql -h /run/postgresql -c 'DROP DATABASE IF EXISTS ssh_manager WITH (FORCE);' \
      && psql -h /run/postgresql -c 'CREATE DATABASE ssh_manager OWNER ssh_manager;'"
 
 # Over TCP, not the socket: the socket authenticates by peer, so PGPASSWORD
@@ -37,13 +41,19 @@ podman exec sam-server \
 # with "Peer authentication failed". Restoring as postgres instead is not an
 # option — the tables would end up owned by postgres and the app, which
 # connects as ssh_manager, could not read them.
-podman exec sam-server \
+#
+# PGPASSWORD is exported and forwarded by name, never written into a command
+# line: an inline assignment put the database password in the argv of podman
+# and of the container process, readable by any local user through /proc.
+export PGPASSWORD="${POSTGRES_PASSWORD}"
+podman exec -e PGPASSWORD sam-server \
     su -s /bin/sh postgres -c \
-    "PGPASSWORD=${POSTGRES_PASSWORD} pg_restore --no-owner --no-privileges \
+    'pg_restore --no-owner --no-privileges \
         -h 127.0.0.1 \
         -U ssh_manager \
         -d ssh_manager \
-        /tmp/sam.pg_dump"
+        /tmp/sam.pg_dump'
+unset PGPASSWORD
 
 # The per-server key pairs and known_hosts come back with the ssh_data volume,
 # so there is nothing to copy here.
