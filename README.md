@@ -316,21 +316,21 @@ Then use `manage.py` through the container:
 
 ```bash
 # List all administrators
-podman exec sam-app python3 /app/app/manage.py admin list
+podman exec sam-server python3 /app/app/manage.py admin list
 
 # Create a new administrator (default role: operator)
-podman exec sam-app python3 /app/app/manage.py admin add \
+podman exec sam-server python3 /app/app/manage.py admin add \
   --username alice --email alice@example.com --password SECRET --role operator
 
 # Promote to sysadmin
-podman exec sam-app python3 /app/app/manage.py admin update alice --role sysadmin
+podman exec sam-server python3 /app/app/manage.py admin update alice --role sysadmin
 
 # Demote to viewer
-podman exec sam-app python3 /app/app/manage.py admin update alice --role viewer
+podman exec sam-server python3 /app/app/manage.py admin update alice --role viewer
 
 # Disable / re-enable an account
-podman exec sam-app python3 /app/app/manage.py admin disable alice
-podman exec sam-app python3 /app/app/manage.py admin enable alice
+podman exec sam-server python3 /app/app/manage.py admin disable alice
+podman exec sam-server python3 /app/app/manage.py admin enable alice
 ```
 
 ## Key lifecycle
@@ -353,23 +353,23 @@ Key conformity is checked against ANSSI recommendations: `ssh-ed25519` is always
 
 ```bash
 # List keys pending review
-podman exec sam-app python3 /app/app/manage.py keys list --status PENDING_REVIEW
+podman exec sam-server python3 /app/app/manage.py keys list --status PENDING_REVIEW
 
 # Validate a key
-podman exec sam-app python3 /app/app/manage.py keys validate SHA256:...
+podman exec sam-server python3 /app/app/manage.py keys validate SHA256:...
 
 # Revoke a key with a reason
-podman exec sam-app python3 /app/app/manage.py keys revoke SHA256:... --reason "Orphan key"
+podman exec sam-server python3 /app/app/manage.py keys revoke SHA256:... --reason "Orphan key"
 
 # Assign a key to an owner
-podman exec sam-app python3 /app/app/manage.py keys assign SHA256:... --owner "Alice Martin"
+podman exec sam-server python3 /app/app/manage.py keys assign SHA256:... --owner "Alice Martin"
 
 # Set expiry (duration or date)
-podman exec sam-app python3 /app/app/manage.py keys set-expiry SHA256:... --hours 24
-podman exec sam-app python3 /app/app/manage.py keys set-expiry SHA256:... --date "2026-12-31 23:59"
+podman exec sam-server python3 /app/app/manage.py keys set-expiry SHA256:... --hours 24
+podman exec sam-server python3 /app/app/manage.py keys set-expiry SHA256:... --date "2026-12-31 23:59"
 
 # Remove expiry
-podman exec sam-app python3 /app/app/manage.py keys remove-expiry SHA256:...
+podman exec sam-server python3 /app/app/manage.py keys remove-expiry SHA256:...
 ```
 
 ## Locking and unlocking a Unix account
@@ -386,10 +386,10 @@ Revoking a key removes it from `authorized_keys` but leaves the Unix account act
 **Via CLI**:
 
 ```bash
-podman exec sam-app python3 /app/app/manage.py access lock-user \
+podman exec sam-server python3 /app/app/manage.py access lock-user \
   --user alice --server server-prod-01
 
-podman exec sam-app python3 /app/app/manage.py access unlock-user \
+podman exec sam-server python3 /app/app/manage.py access unlock-user \
   --user alice --server server-prod-01
 ```
 
@@ -424,7 +424,7 @@ Each failed login attempt and each ban is logged to stdout in a structured forma
 [LOGIN_BANNED] ip=1.2.3.4 username=admin ban_seconds=300
 ```
 
-These logs are visible via `podman logs sam-app` and can be consumed by fail2ban or CrowdSec to apply firewall-level bans. Example fail2ban filter:
+These logs are visible via `podman logs sam-server` and can be consumed by fail2ban or CrowdSec to apply firewall-level bans. Example fail2ban filter:
 
 ```ini
 # /etc/fail2ban/filter.d/sam.conf
@@ -438,18 +438,18 @@ failregex = \[LOGIN_FAILED\] ip=<HOST>
 enabled  = true
 filter   = sam
 backend  = systemd
-journalmatch = CONTAINER_NAME=sam-app
+journalmatch = CONTAINER_NAME=sam-server
 maxretry = 5
 bantime  = 3600
 ```
 
 ## CLI reference (NS8)
 
-All `manage.py` commands must be run inside the module container. Enter the module environment first with `runagent -m sam1`, then use `podman exec sam-app`:
+All `manage.py` commands must be run inside the module container. Enter the module environment first with `runagent -m sam1`, then use `podman exec sam-server`:
 
 ```bash
 # Shortcut alias (optional, for the current shell session)
-EXEC="podman exec sam-app python3 /app/app/manage.py"
+EXEC="podman exec sam-server python3 /app/app/manage.py"
 
 # Servers
 $EXEC servers list
@@ -527,4 +527,4 @@ Translated with [Weblate](https://hosted.weblate.org/projects/ns8/).
 To setup the translation process:
 
 - add [GitHub Weblate app](https://docs.weblate.org/en/latest/admin/continuous.html#github-setup) to your repository
-- add your repository to [hosted.weblate.org]((https://hosted.weblate.org) or ask a NethServer developer to add it to ns8 Weblate project
+- add your repository to [hosted.weblate.org](https://hosted.weblate.org) or ask a NethServer developer to add it to ns8 Weblate project
