@@ -32,10 +32,15 @@ podman exec sam-server \
     "psql -h /run/postgresql -c 'DROP DATABASE IF EXISTS ssh_manager;' \
      && psql -h /run/postgresql -c 'CREATE DATABASE ssh_manager OWNER ssh_manager;'"
 
+# Over TCP, not the socket: the socket authenticates by peer, so PGPASSWORD
+# was ignored and restoring as ssh_manager from the postgres OS user failed
+# with "Peer authentication failed". Restoring as postgres instead is not an
+# option — the tables would end up owned by postgres and the app, which
+# connects as ssh_manager, could not read them.
 podman exec sam-server \
     su -s /bin/sh postgres -c \
     "PGPASSWORD=${POSTGRES_PASSWORD} pg_restore --no-owner --no-privileges \
-        -h /run/postgresql \
+        -h 127.0.0.1 \
         -U ssh_manager \
         -d ssh_manager \
         /tmp/sam.pg_dump"
