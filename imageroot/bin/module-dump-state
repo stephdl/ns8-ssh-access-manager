@@ -12,10 +12,11 @@ if ! systemctl --user -q is-active sam.service; then
 fi
 
 
+# A live dump, because /data/pg inside the ssh_data volume is copied while
+# PostgreSQL is running and would restore inconsistent.
 echo "Dumping ssh_manager postgres database"
-podman exec sam-app pg_dump -U ssh_manager --format=c  ssh_manager > sam.pg_dump
+podman exec sam-server pg_dump -U ssh_manager --format=c  ssh_manager > sam.pg_dump
 
-echo "Saving SSH collector keys and known_hosts"
-podman cp sam-app:/data/keys/collector_key     collector_key
-podman cp sam-app:/data/keys/collector_key.pub collector_key.pub
-podman cp sam-app:/data/keys/known_hosts        known_hosts
+# The per-server key pairs and known_hosts live in /data/keys, already covered
+# by the ssh_data volume. The single global collector key they replaced no
+# longer exists — copying it aborted the whole dump under set -e.
