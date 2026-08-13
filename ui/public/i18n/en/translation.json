@@ -38,7 +38,8 @@
     "domain_already_used_in_traefik": "Domain already used in traefik",
     "host_pattern": "Must be a valid fully qualified domain name",
     "host_format": "Must be a valid fully qualified domain name",
-    "fqdn_default_credentials": "Default credentials: login admin, password admin"
+    "default_password_warning": "Default administrator password in use",
+    "default_password_warning_description": "The {user} account still uses the default password {password}. Sign in to ssh-access-manager and change it."
   },
   "about": {
     "title": "About"
