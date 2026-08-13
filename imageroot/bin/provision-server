@@ -74,7 +74,7 @@ echo "[provision-server] Provisioning ${SSH_USER}@${IP} and registering '${HOSTN
 # servers add provisions over SSH, generates the per-server key pair, deploys
 # the sam-* helpers and runs the first scan. The row is only created on
 # success, so a failure here leaves no half-registered server behind.
-podman exec -i sam-app \
+podman exec -i sam-server \
     python3 /app/app/manage.py servers add \
     --hostname "${HOSTNAME}" \
     --ip "${IP}" \
