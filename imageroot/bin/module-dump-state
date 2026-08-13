@@ -14,8 +14,11 @@ fi
 
 # A live dump, because /data/pg inside the ssh_data volume is copied while
 # PostgreSQL is running and would restore inconsistent.
+# Run as the postgres OS user: the socket authenticates by peer, so -U
+# ssh_manager from root failed with "Peer authentication failed".
 echo "Dumping ssh_manager postgres database"
-podman exec sam-server pg_dump -U ssh_manager --format=c  ssh_manager > sam.pg_dump
+podman exec sam-server \
+    su -s /bin/sh postgres -c "pg_dump -h /run/postgresql --format=c ssh_manager" > sam.pg_dump
 
 # The per-server key pairs and known_hosts live in /data/keys, already covered
 # by the ssh_data volume. The single global collector key they replaced no
