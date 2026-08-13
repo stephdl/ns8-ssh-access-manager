@@ -6,13 +6,15 @@
     "examples": [
         {
             "host": "sam.domain.org",
-            "lets_encrypt": true
+            "lets_encrypt": true,
+            "is_default_password": true
         }
     ],
     "type": "object",
     "required": [
         "host",
-        "lets_encrypt"
+        "lets_encrypt",
+        "is_default_password"
     ],
     "properties": {
         "host": {
@@ -24,6 +26,11 @@
             "type": "boolean",
             "title": "Let's Encrypt certificate",
             "description": "Request a valid Let's Encrypt certificate."
+        },
+        "is_default_password": {
+            "type": "boolean",
+            "title": "Default administrator password",
+            "description": "True when the admin account still uses the default password."
         }
     }
 }

@@ -12,7 +12,37 @@
 import os
 import sys
 import json
+import subprocess
 import agent
+
+
+def is_default_password():
+    """True while the admin account still has the default password.
+
+    The app stamps administrators.password_changed_at on the first change, so
+    a NULL there means the well-known admin/admin pair is still in place. Any
+    failure (service stopped, database not ready) reports False rather than
+    scaring the operator with a warning it cannot substantiate.
+    """
+    query = (
+        "SELECT count(*) FROM administrators "
+        "WHERE username = 'admin' AND password_changed_at IS NULL"
+    )
+    try:
+        proc = subprocess.run(
+            [
+                "podman", "exec", "sam-server",
+                "su", "-s", "/bin/sh", "postgres", "-c",
+                f'psql -tAq -h /run/postgresql -d ssh_manager -c "{query}"',
+            ],
+            capture_output=True, text=True, timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    if proc.returncode != 0:
+        return False
+    return proc.stdout.strip() == "1"
+
 
 # Prepare return variable
 config = {}
@@ -20,6 +50,7 @@ config = {}
 # Read current configuration from the environment file
 config["host"] = os.getenv("TRAEFIK_HOST","")
 config["lets_encrypt"] = agent.get_route(os.environ['MODULE_ID']).get('lets_encrypt', False)
+config["is_default_password"] = is_default_password()
 
 # Dump the configuration to stdout
 json.dump(config, fp=sys.stdout)

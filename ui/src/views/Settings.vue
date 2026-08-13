@@ -19,6 +19,21 @@
         />
       </cv-column>
     </cv-row>
+    <cv-row v-if="isDefaultPassword">
+      <cv-column>
+        <NsInlineNotification
+          kind="warning"
+          :title="$t('settings.default_password_warning')"
+          :description="
+            $t('settings.default_password_warning_description', {
+              user: 'admin',
+              password: 'admin',
+            })
+          "
+          :showCloseButton="false"
+        />
+      </cv-column>
+    </cv-row>
     <cv-row>
       <cv-column>
         <cv-tile light>
@@ -30,7 +45,6 @@
               class="mg-bottom"
               :invalid-message="$t(error.host)"
               :disabled="loading.getConfiguration || loading.configureModule"
-              :helper-text="$t('settings.fqdn_default_credentials')"
               ref="host"
             >
             </cv-text-input>
@@ -178,6 +192,7 @@ export default {
       host: "",
       isLetsEncryptEnabled: false,
       isLetsEncryptCurrentlyEnabled: false,
+      isDefaultPassword: false,
       loading: {
         getConfiguration: false,
         configureModule: false,
@@ -309,6 +324,7 @@ export default {
       this.host = config.host;
       this.isLetsEncryptEnabled = config.lets_encrypt;
       this.isLetsEncryptCurrentlyEnabled = config.lets_encrypt;
+      this.isDefaultPassword = config.is_default_password;
 
       this.loading.getConfiguration = false;
       this.focusElement("host");
