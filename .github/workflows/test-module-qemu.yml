@@ -1,0 +1,47 @@
+name: "Test module on QEMU"
+
+# Boots a throwaway NS8 node on the runner and runs tests/ against it, so the
+# module is tested without any external infrastructure. Chained on the build:
+# a broken image never reaches the test. The job lives in
+# stephdl/ns8-ci-actions.
+
+run-name: "Test ${{ github.event.workflow_run.head_branch || github.ref_name }} on QEMU"
+
+on:
+  workflow_run:
+    workflows: ["Publish images"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      debug_shell:
+        description: "Open a tmate shell when the suite fails"
+        required: false
+        default: false
+        type: boolean
+
+# github.ref is the default branch under workflow_run, so it cannot key this.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_branch || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  module:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    uses: NethServer/ns8-github-actions/.github/workflows/module-info.yml@v1
+
+  test:
+    needs: module
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [rocky9, debian13]
+    uses: stephdl/ns8-ci-actions/.github/workflows/test-on-qemu.yml@v1
+    with:
+      distro: ${{ matrix.distro }}
+      # build-images.sh publishes as sam, not as the name module-info derives
+      # from the repository, so the reference is spelled out here.
+      image_url: ghcr.io/${{ github.repository_owner }}/sam:${{ needs.module.outputs.tag }}
+      repo_ref: ${{ needs.module.outputs.sha }}
+      version_tag: ${{ needs.module.outputs.tag }}
+
+      debug_shell: ${{ github.event.inputs.debug_shell == 'true' || false }}
