@@ -30,6 +30,42 @@ Check if ssh-access-manager configuration reads back
 Check if the ssh-access-manager virtualhost answers
     Wait Until Keyword Succeeds    180s    10s    ssh-access-manager answers behind Traefik
 
+Check if the database dump is consistent
+    # state-include.conf lists state/sam.pg_dump: bin/module-dump-state takes a
+    # live dump, because the volume copy alone would restore inconsistent
+    ${rc} =    Execute Command    runagent -m ${module_id} module-dump-state
+    ...    return_rc=True  return_stdout=False
+    Should Be Equal As Integers    ${rc}  0
+    ${output}  ${rc} =    Execute Command
+    ...    runagent -m ${module_id} bash -c 'file -b $AGENT_STATE_DIR/sam.pg_dump; wc -c < $AGENT_STATE_DIR/sam.pg_dump'
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}  0
+    Should Contain    ${output}    PostgreSQL custom database dump
+
+Check if a password can be reset
+    # bin/reset-password is how an operator recovers an account, and nothing
+    # exercised it
+    ${output}  ${rc} =    Execute Command
+    ...    runagent -m ${module_id} reset-password --username admin --password 'Nethesis,1234'
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}  0
+
+Check if the services are running
+    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} systemctl --user is-active sam.service sam-app.service
+    ...    return_rc=True  return_stdout=False
+    Should Be Equal As Integers    ${rc}  0
+
+Check if a configuration without the host is refused
+    # The agent exits 10 on a JSON Schema input validation failure
+    ${errors}  ${rc} =    Execute Command
+    ...    api-cli run module/${module_id}/configure-module --data '{"lets_encrypt":false}'
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}  10
+    # A missing required field is reported on the whole object, and the field
+    # name goes to stderr, which Execute Command does not return here
+    Should Contain    ${errors}    (root)_required
+
 Take screenshots of the module pages
     [Documentation]    Capture what cluster-admin shows, for the software center
     ...                entry. Tagged ui: the shared runner skips it unless
