@@ -18,6 +18,11 @@ on:
         required: false
         default: false
         type: boolean
+      ui_tests:
+        description: "Run the cases tagged ui and publish their screenshots"
+        required: false
+        default: false
+        type: boolean
 
 # github.ref is the default branch under workflow_run, so it cannot key this.
 concurrency:
@@ -29,8 +34,49 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     uses: NethServer/ns8-github-actions/.github/workflows/module-info.yml@v1
 
-  test:
+  # The cases tagged ui drive a browser and publish their screenshots on the
+  # pull request. Worth it when the interface itself moved, which is what a
+  # renovate bump of a ui/ dependency does; noise on every other push.
+  ui_tests:
     needs: module
+    runs-on: ubuntu-latest
+    outputs:
+      needed: ${{ steps.decide.outputs.needed }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.module.outputs.sha }}
+          fetch-depth: 2
+      - id: decide
+        env:
+          BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
+          FORCED: ${{ github.event.inputs.ui_tests == 'true' }}
+        run: |
+          set -euo pipefail
+          if git diff --name-only HEAD^ HEAD | grep -qE '^ui/|^build-images.sh$'; then
+            touched_ui=true
+          else
+            touched_ui=false
+          fi
+          case "${BRANCH}" in
+            renovate-*|renovate/*) renovate=true ;;
+            *) renovate=false ;;
+          esac
+          if [ "${FORCED}" = "true" ] || { [ "${touched_ui}" = "true" ] && [ "${renovate}" = "true" ]; }; then
+            needed=true
+          else
+            needed=false
+          fi
+          echo "branch=${BRANCH} touched_ui=${touched_ui} renovate=${renovate} needed=${needed}"
+          echo "needed=${needed}" >> "$GITHUB_OUTPUT"
+
+  test:
+    needs: [module, ui_tests]
+    # The screenshots are published as a comment, and a called workflow cannot
+    # hold more than its caller
+    permissions:
+      contents: read
+      pull-requests: write
     strategy:
       fail-fast: false
       matrix:
@@ -43,5 +89,9 @@ jobs:
       image_url: ghcr.io/${{ github.repository_owner }}/sam:${{ needs.module.outputs.tag }}
       repo_ref: ${{ needs.module.outputs.sha }}
       version_tag: ${{ needs.module.outputs.tag }}
+      # Empty: run the shared runner of ns8-ci-actions rather than a copy here
+      script: ""
+      # One leg only: each one that carries the flag comments on the pull request
+      run_ui_tests: ${{ matrix.distro == 'rocky9' && needs.ui_tests.outputs.needed == 'true' }}
 
       debug_shell: ${{ github.event.inputs.debug_shell == 'true' || false }}

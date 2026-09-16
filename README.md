@@ -513,10 +513,17 @@ remove-module --no-preserve sam1
 
 ## Testing
 
-Test the module using the `test-module.sh` script:
+The runner lives in `ns8-ci-actions`, shared by every module. Install it once:
 
+    curl -o /tmp/run-ns8-tests https://raw.githubusercontent.com/stephdl/ns8-ci-actions/v1/scripts/test-module.sh
+    install -m 0755 -Z /tmp/run-ns8-tests ~/.local/bin
 
-    ./test-module.sh <NODE_ADDR> ghcr.io/nethserver/sam:latest
+Then, from this directory:
+
+    run-ns8-tests <NODE_ADDR> ghcr.io/nethserver/sam:latest
+
+Add `RUN_UI_TESTS=true` to also run the cases tagged `ui`, which capture the
+module pages of cluster-admin in `tests/outputs/browser/screenshot/`.
 
 The tests are made using [Robot Framework](https://robotframework.org/)
 
