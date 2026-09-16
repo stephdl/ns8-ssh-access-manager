@@ -62,7 +62,9 @@ Check if a configuration without the host is refused
     ...    api-cli run module/${module_id}/configure-module --data '{"lets_encrypt":false}'
     ...    return_rc=True
     Should Be Equal As Integers    ${rc}  10
-    Should Contain    ${errors}    host
+    # A missing required field is reported on the whole object, and the field
+    # name goes to stderr, which Execute Command does not return here
+    Should Contain    ${errors}    (root)_required
 
 Take screenshots of the module pages
     [Documentation]    Capture what cluster-admin shows, for the software center
