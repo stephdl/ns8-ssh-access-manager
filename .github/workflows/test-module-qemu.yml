@@ -2,8 +2,8 @@ name: "Test module on QEMU"
 
 # Boots a throwaway NS8 node on the runner and runs tests/ against it, so the
 # module is tested without any external infrastructure. Chained on the build:
-# a broken image never reaches the test. The job lives in
-# stephdl/ns8-ci-actions.
+# a broken image never reaches the test. The wrapper lives in
+# stephdl/ns8-ci-actions and mirrors the DigitalOcean one of ns8-github-actions.
 
 run-name: "Test ${{ github.event.workflow_run.head_branch || github.ref_name }} on QEMU"
 
@@ -24,74 +24,21 @@ on:
         default: false
         type: boolean
 
-# github.ref is the default branch under workflow_run, so it cannot key this.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_branch || github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  module:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
-    uses: NethServer/ns8-github-actions/.github/workflows/module-info.yml@v1
-
-  # The cases tagged ui drive a browser and publish their screenshots on the
-  # pull request. Worth it when the interface itself moved, which is what a
-  # renovate bump of a ui/ dependency does; noise on every other push.
-  ui_tests:
-    needs: module
-    runs-on: ubuntu-latest
-    outputs:
-      needed: ${{ steps.decide.outputs.needed }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ needs.module.outputs.sha }}
-          fetch-depth: 2
-      - id: decide
-        env:
-          BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
-          FORCED: ${{ github.event.inputs.ui_tests == 'true' }}
-        run: |
-          set -euo pipefail
-          if git diff --name-only HEAD^ HEAD | grep -qE '^ui/|^build-images.sh$'; then
-            touched_ui=true
-          else
-            touched_ui=false
-          fi
-          case "${BRANCH}" in
-            renovate-*|renovate/*) renovate=true ;;
-            *) renovate=false ;;
-          esac
-          if [ "${FORCED}" = "true" ] || { [ "${touched_ui}" = "true" ] && [ "${renovate}" = "true" ]; }; then
-            needed=true
-          else
-            needed=false
-          fi
-          echo "branch=${BRANCH} touched_ui=${touched_ui} renovate=${renovate} needed=${needed}"
-          echo "needed=${needed}" >> "$GITHUB_OUTPUT"
-
-  test:
-    needs: [module, ui_tests]
+  run:
+    name: "Run tests"
     # The screenshots are published as a comment, and a called workflow cannot
-    # hold more than its caller
+    # hold more than its caller. Granted here rather than by raising the
+    # repository default, so the write token stops at this job.
     permissions:
       contents: read
       pull-requests: write
-    strategy:
-      fail-fast: false
-      matrix:
-        distro: [rocky9, debian13]
-    uses: stephdl/ns8-ci-actions/.github/workflows/test-on-qemu.yml@v1
+    uses: stephdl/ns8-ci-actions/.github/workflows/test-module-qemu.yml@v1
     with:
-      distro: ${{ matrix.distro }}
-      # build-images.sh publishes as sam, not as the name module-info derives
-      # from the repository, so the reference is spelled out here.
-      image_url: ghcr.io/${{ github.repository_owner }}/sam:${{ needs.module.outputs.tag }}
-      repo_ref: ${{ needs.module.outputs.sha }}
-      version_tag: ${{ needs.module.outputs.tag }}
-      # Empty: run the shared runner of ns8-ci-actions rather than a copy here
-      script: ""
-      # One leg only: each one that carries the flag comments on the pull request
-      run_ui_tests: ${{ matrix.distro == 'rocky9' && needs.ui_tests.outputs.needed == 'true' }}
-
-      debug_shell: ${{ github.event.inputs.debug_shell == 'true' || false }}
+      # build-images.sh publishes as sam, not as the name module-info
+      # derives from the repository, so the name is spelled out here.
+      image_name: sam
+      # update tested separately later, independent of this drop-in
+      # scenarios: '["install","update"]'
+      ui_tests_strategy: ${{ github.event.inputs.ui_tests == 'true' && 'always' || 'on_renovate_ui_change' }}
+      debug_shell: ${{ github.event.inputs.debug_shell == 'true' }}
