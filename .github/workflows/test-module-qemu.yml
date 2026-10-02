@@ -2,8 +2,7 @@ name: "Test module on QEMU"
 
 # Boots a throwaway NS8 node on the runner and runs tests/ against it, so the
 # module is tested without any external infrastructure. Chained on the build:
-# a broken image never reaches the test. The wrapper lives in
-# stephdl/ns8-ci-actions and mirrors the DigitalOcean one of ns8-github-actions.
+# a broken image never reaches the test.
 
 run-name: "Test ${{ github.event.workflow_run.head_branch || github.ref_name }} on QEMU"
 
@@ -27,13 +26,14 @@ on:
 jobs:
   run:
     name: "Run tests"
-    # The screenshots are published as a comment, and a called workflow cannot
-    # hold more than its caller. Granted here rather than by raising the
-    # repository default, so the write token stops at this job.
+    # A commit status per leg and the screenshots comment, and a called
+    # workflow cannot hold more than its caller. Granted here rather than by
+    # raising the repository default, so the write token stops at this job.
     permissions:
       contents: read
       pull-requests: write
-    uses: stephdl/ns8-ci-actions/.github/workflows/test-module-qemu.yml@v1
+      statuses: write
+    uses: NethServer/ns8-github-actions/.github/workflows/test-module-qemu.yml@v1
     with:
       # build-images.sh publishes as sam, not as the name module-info
       # derives from the repository, so the name is spelled out here.
