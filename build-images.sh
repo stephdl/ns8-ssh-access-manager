@@ -24,7 +24,7 @@ container=$(buildah from scratch)
 # Reuse existing nodebuilder-sam container, to speed up builds
 if ! buildah containers --format "{{.ContainerName}}" | grep -q nodebuilder-sam; then
     echo "Pulling NodeJS runtime..."
-    buildah from --name nodebuilder-sam -v "${PWD}:/usr/src:Z" docker.io/library/node:26.13.0-slim
+    buildah from --name nodebuilder-sam -v "${PWD}:/usr/src:Z" docker.io/library/node:26.13.1-slim
     buildah run nodebuilder-sam sh -c "npm install -g corepack@${corepack_version} && corepack enable"
 fi
 
